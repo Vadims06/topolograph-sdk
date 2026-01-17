@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topolograph-sdk"
+version = "0.1.1"
+description = "Python SDK for Topolograph - A Pythonic client for the Topolograph REST API with SSH-based topology ingestion"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Topolograph", email = "info@topolograph.com"}
+]
+keywords = ["topolograph", "network", "topology", "ospf", "isis", "lsdb"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: System :: Networking",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "requests>=2.28.0",
+    "nornir>=3.0.0",
+    "nornir-scrapli>=2022.1.0",
+    "typer>=0.9.0",
+    "pyyaml>=6.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Vadims06/topolograph-sdk"
+Documentation = "https://github.com/Vadims06/topolograph-sdk"
+Repository = "https://github.com/Vadims06/topolograph-sdk"
+Issues = "https://github.com/Vadims06/topolograph-sdk/issues"
+
+[project.scripts]
+topo = "cli.main:app"
+
+[tool.setuptools]
+packages = ["topolograph", "cli"]
+
+[tool.setuptools.package-data]
+topolograph = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"

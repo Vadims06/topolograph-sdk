@@ -1,0 +1,62 @@
+---
+# Topolograph SDK Inventory Example
+# 
+# This file demonstrates the inventory format for collecting LSDB data
+# from network devices. Copy this file to inventory.yaml and update with
+# your device credentials.
+#
+# Required fields for each host:
+#   - hostname: IP address or hostname of the device
+#   - username: SSH username
+#   - password: SSH password
+#   - vendor: Device vendor (cisco, juniper, frr, arista, nokia, huawei)
+#   - protocol: IGP protocol (ospf, isis)
+#   - port: SSH port (optional, defaults to 22)
+#
+# Supported vendors:
+#   - cisco: Cisco IOS/IOS-XE
+#   - juniper: Juniper JunOS
+#   - frr: FRRouting (FRR)
+#   - arista: Arista EOS
+#   - nokia: Nokia SR OS
+#   - huawei: Huawei
+#
+# Supported protocols:
+#   - ospf: OSPF (v2)
+#   - isis: IS-IS
+
+# Example: FRR router with IS-IS
+router1:
+  hostname: 172.20.20.11
+  username: zebra
+  password: zebra
+  vendor: frr
+  protocol: isis
+  port: 22
+
+# Example: Cisco router with OSPF
+router2:
+  hostname: 10.0.0.1
+  username: admin
+  password: admin123
+  vendor: cisco
+  protocol: ospf
+  port: 22
+
+# Example: Juniper router with IS-IS
+router3:
+  hostname: 10.0.0.2
+  username: admin
+  password: Juniper123!
+  vendor: juniper
+  protocol: isis
+  port: 22
+
+# Example: Cisco router with OSPF (custom port)
+router4:
+  hostname: 10.0.0.3
+  username: network-admin
+  password: secure-password
+  vendor: cisco
+  protocol: ospf
+  port: 2222
