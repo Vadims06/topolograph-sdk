@@ -38,7 +38,7 @@ class NodesManager:
         
         Args:
             name: Optional node name to filter by
-            **query_params: Additional query parameters
+            **query_params: Additional query parameters (e.g., location='dc1', ha_role='primary')
         
         Returns:
             List of Node objects
@@ -46,8 +46,12 @@ class NodesManager:
         params = {}
         if name:
             params['name'] = name
+        # Add query params directly - API accepts them as individual query parameters
+        # For deepObject style, we need to format them properly
         if query_params:
-            params['node_query_params'] = query_params
+            # Format as node_query_params[location]=dc1&node_query_params[ha_role]=primary
+            for key, value in query_params.items():
+                params[f'node_query_params[{key}]'] = value
         
         response = self._client.get(
             f'/diagram/{self.graph_time}/nodes',

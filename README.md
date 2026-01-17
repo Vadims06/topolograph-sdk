@@ -15,6 +15,8 @@ A Pythonic, object-oriented client for the Topolograph REST API with built-in to
 pip install topolograph-sdk
 ```
 
+**PyPI Package**: [https://pypi.org/project/topolograph-sdk/](https://pypi.org/project/topolograph-sdk/)
+
 ## Quick Start
 
 ### Basic Usage

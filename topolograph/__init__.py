@@ -9,7 +9,7 @@ from .resources.event import EventsManager, Event
 from .collector.collector import TopologyCollector
 from .upload.uploader import Uploader
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 __all__ = [
     "Topolograph",

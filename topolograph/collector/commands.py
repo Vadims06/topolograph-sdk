@@ -28,9 +28,64 @@ COMMAND_REGISTRY = {
             "show ip ospf database external detail"
         ],
         "nokia": [
-            "show router ospf database router detail",
-            "show router ospf database network detail",
-            "show router ospf database external detail"
+            "show router ospf database type router detail",
+            "show router ospf database type network detail",
+            "show router ospf database type external detail"
+        ],
+        "cisco_nxos": [
+            "show ip ospf database router detail",
+            "show ip ospf database network detail",
+            "show ip ospf database external detail"
+        ],
+        "fortinet": [
+            "get router info ospf database router lsa",
+            "get router info ospf database network lsa",
+            "get router info ospf database external lsa"
+        ],
+        "ruckus": [
+            "show ip ospf database link-state router",
+            "show ip ospf database link-state network",
+            "show ip ospf database external-link-state"
+        ],
+        "bird": [
+            "show ospf state all",
+            "show ospf state all",
+            "show ospf state all"
+        ],
+        "mikrotik": [
+            "/routing ospf lsa print detail file=lsa.txt",
+            "/routing ospf lsa print detail file=lsa.txt",
+            "/routing ospf lsa print detail file=lsa.txt"
+        ],
+        "huawei": [
+            "display ospf lsdb router",
+            "display ospf lsdb network",
+            "display ospf lsdb ase"
+        ],
+        "paloalto": [
+            "show routing protocol ospf dumplsdb",
+            "show routing protocol ospf dumplsdb",
+            "show routing protocol ospf dumplsdb"
+        ],
+        "ubiquiti": [
+            "show ip ospf database router",
+            "show ip ospf database network",
+            "show ip ospf database external"
+        ],
+        "allied_telesis": [
+            "show ip ospf database router",
+            "show ip ospf database network",
+            "show ip ospf database external"
+        ],
+        "extreme": [
+            "show ospf lsdb detail lstype router",
+            "show ospf lsdb detail lstype network",
+            "show ospf lsdb detail lstype as-external"
+        ],
+        "ericsson": [
+            "show ospf database router detail",
+            "show ospf database network detail",
+            "show ospf database external detail"
         ]
     },
     "ospfv3": {
