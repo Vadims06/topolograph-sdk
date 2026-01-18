@@ -123,6 +123,66 @@ networks = graph.networks.find_by_node("1.1.1.1")
 network = graph.networks.find_by_network("10.10.10.0/24")
 ```
 
+### Uploading YAML Diagrams
+
+Upload arbitrary network topologies defined in YAML format:
+
+```python
+# Define topology in YAML format
+yaml_diagram = """
+nodes:
+  10.10.10.1:
+    label: Router1
+    location: dc1
+  10.10.10.2:
+    label: Router2
+    location: dc1
+edges:
+  - src: 10.10.10.1
+    dst: 10.10.10.2
+    cost: 10
+    bw: 1000
+"""
+
+# Upload diagram
+graph = topo.graphs.upload_diagram(yaml_diagram)
+print(f"Diagram uploaded with graph_time: {graph.graph_time}")
+```
+
+### Updating Node Attributes
+
+Update node attributes in YAML-based diagrams:
+
+```python
+# Get a YAML diagram graph
+graph = topo.graphs.get_by_time("18Jan2026_15h53m13s_3_hosts_yaml")
+
+# Get a node
+node = graph.nodes.get_by_id(0)
+print(f"Current name: {node.name}")
+
+# Update node completely (PUT - replaces all attributes)
+updated_node = graph.nodes.update(
+    node.id,
+    {
+        'name': 'new_router_name',
+        'location': 'datacenter1',
+        'role': 'core_router',
+        'vendor': 'cisco'
+    }
+)
+
+# Partially update node (PATCH - only specified attributes)
+updated_node = graph.nodes.patch(
+    node.id,
+    {'name': 'renamed_router'}
+)
+
+# Or use instance methods for convenience
+node = graph.nodes.get_by_id(0)
+updated_node = node.patch(name='new_name', location='dc2')
+```
+
 ### Path Computation
 
 ```python

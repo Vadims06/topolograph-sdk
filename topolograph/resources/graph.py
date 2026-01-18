@@ -241,3 +241,35 @@ class GraphsManager:
         """
         response = self._client.post('/graphs', json=lsdb_array)
         return Graph(self._client, response.json())
+    
+    def upload_diagram(self, yaml_str: str) -> Graph:
+        """Upload a YAML diagram and create a new graph.
+        
+        Args:
+            yaml_str: YAML diagram as a string. Format:
+                nodes:
+                  - name: node1
+                  - name: node2
+                edges:
+                  - src: node1
+                    dst: node2
+                    weight: 10
+        
+        Returns:
+            Graph object representing the uploaded diagram
+            
+        Raises:
+            ValidationError: If YAML is invalid or empty
+        """
+        payload = {'yaml_diagram_str': yaml_str}
+        response = self._client.post('/diagram', json=payload)
+        diagram_data = response.json()
+        # DIAGRAM response has: url, graph_time, timestamp
+        # Convert to Graph-compatible format
+        graph_data = {
+            'graph_time': diagram_data['graph_time'],
+            'timestamp': diagram_data.get('timestamp'),
+            'protocol': 'yaml',
+            'is_from_watcher': False
+        }
+        return Graph(self._client, graph_data)

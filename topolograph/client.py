@@ -198,3 +198,27 @@ class Topolograph:
             Response object
         """
         return self._request('DELETE', endpoint, **kwargs)
+    
+    def put(self, endpoint: str, **kwargs) -> requests.Response:
+        """Make a PUT request.
+        
+        Args:
+            endpoint: API endpoint
+            **kwargs: Additional arguments to pass to requests.put
+        
+        Returns:
+            Response object
+        """
+        return self._request('PUT', endpoint, **kwargs)
+    
+    def patch(self, endpoint: str, **kwargs) -> requests.Response:
+        """Make a PATCH request.
+        
+        Args:
+            endpoint: API endpoint
+            **kwargs: Additional arguments to pass to requests.patch
+        
+        Returns:
+            Response object
+        """
+        return self._request('PATCH', endpoint, **kwargs)
