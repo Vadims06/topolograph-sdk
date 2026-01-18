@@ -1,0 +1,23 @@
+nodes:
+  10.10.10.1:
+    label: Router1
+    location: dc1
+  10.10.10.2:
+    label: Router2
+    location: dc1
+  10.10.10.3:
+    label: Router3
+    location: dc2
+edges:
+  - src: 10.10.10.1
+    dst: 10.10.10.2
+    cost: 10
+    bw: 1000
+  - src: 10.10.10.2
+    dst: 10.10.10.3
+    cost: 20
+    bw: 1000
+  - src: 10.10.10.1
+    dst: 10.10.10.3
+    cost: 30
+    bw: 500
