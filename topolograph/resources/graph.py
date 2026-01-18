@@ -72,6 +72,66 @@ class Graph:
         response = self._client.get(f'/graph/{self.graph_time}/status')
         return response.json()
     
+    def networks_list(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        filter_type: str = 'all'
+    ) -> Dict[str, Any]:
+        """Get paginated list of networks with optional filtering.
+        
+        Args:
+            page: Page number (default: 1)
+            per_page: Items per page (default: 20)
+            filter_type: Filter type - 'all', 'backuped_only', or 'non_backuped_only' (default: 'all')
+        
+        Returns:
+            Dictionary with:
+            - items: List of network dictionaries with subnet, termination_points, is_backuped, cost, area
+            - pagination: Dictionary with page, per_page, total, total_pages
+        """
+        params = {
+            'page': page,
+            'per_page': per_page,
+            'filter_type': filter_type
+        }
+        response = self._client.get(f'/graph/{self.graph_time}/networks', params=params)
+        return response.json()
+    
+    def nodes_list(
+        self,
+        page: int = 1,
+        per_page: int = 50
+    ) -> Dict[str, Any]:
+        """Get paginated list of nodes/routers.
+        
+        Args:
+            page: Page number (default: 1)
+            per_page: Items per page (default: 50)
+        
+        Returns:
+            Dictionary with:
+            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS), 
+                     pseudo_rid (IS-IS), networks_count, areas, is_isis
+            - pagination: Dictionary with page, per_page, total, total_pages
+        """
+        params = {
+            'page': page,
+            'per_page': per_page
+        }
+        response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
+        return response.json()
+    
+    def areas_list(self) -> Dict[str, Any]:
+        """Get list of OSPF areas (no pagination needed, typically < 20 areas).
+        
+        Returns:
+            Dictionary with:
+            - items: List of area dictionaries with area_id, nodes_count, networks_count, is_backbone
+        """
+        response = self._client.get(f'/graph/{self.graph_time}/areas')
+        return response.json()
+    
     def delete(self) -> None:
         """Delete this graph."""
         self._client.delete(f'/graph/{self.graph_time}')
