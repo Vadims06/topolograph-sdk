@@ -49,7 +49,7 @@ def graphs(
         graphs_list = client.graphs.list(
             protocol=protocol,
             area=area,
-            watcher_name=watcher,
+            name=watcher,
             latest_only=False
         )
         
@@ -84,7 +84,7 @@ def graphs(
             latest=True,
             protocol=protocol,
             area=area,
-            watcher_name=watcher
+            name=watcher
         )
         
         if not graph:

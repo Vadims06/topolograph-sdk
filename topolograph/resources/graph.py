@@ -1,6 +1,6 @@
 """Graph resource for Topolograph API."""
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from .node import NodesManager
 from .network import NetworksManager
 from .path import PathsManager
@@ -23,6 +23,8 @@ class Graph:
         self.protocol = data.get('protocol')
         self.watcher_name = data.get('watcher_name')
         self.is_from_watcher = data.get('is_from_watcher', False)
+        self.is_monitored = data.get('is_monitored', self.is_from_watcher)
+        self.is_live = data.get('is_live', False)
         self.hosts = data.get('hosts', {})
         self.networks_data = data.get('networks', {})
         self.areas = data.get('areas', [])
@@ -101,35 +103,99 @@ class Graph:
     def nodes_list(
         self,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        protocol: Optional[str] = None,
+        watcher: Optional[bool] = None,
+        area: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Get paginated list of nodes/routers.
-        
+
         Args:
             page: Page number (default: 1)
             per_page: Items per page (default: 50)
-        
+            protocol: Filter — only return if graph matches protocol (ospf, ospfv3, isis, yaml)
+            watcher: Filter — True for watcher-uploaded graphs, False for manually parsed
+            area: Filter — only return if graph contains this area (e.g. "0", "0.0.0.1", "49.0001")
+
         Returns:
             Dictionary with:
-            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS), 
+            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
                      pseudo_rid (IS-IS), networks_count, areas, is_isis
             - pagination: Dictionary with page, per_page, total, total_pages
         """
-        params = {
-            'page': page,
-            'per_page': per_page
-        }
+        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
+        if protocol:
+            params['protocol'] = protocol
+        if watcher is not None:
+            params['watcher'] = str(watcher).lower()
+        if area:
+            params['area'] = area
         response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
         return response.json()
     
     def areas_list(self) -> Dict[str, Any]:
-        """Get list of OSPF areas (no pagination needed, typically < 20 areas).
-        
+        """Get list of areas (no pagination needed, typically < 20 areas).
+
+        Works for both OSPF and IS-IS graphs.
+        OSPF: area_id is "0", "1", or dotted quad; is_backbone is included.
+        IS-IS: area_id is the IS-IS area address string ("49.0001"); is_backbone is omitted.
+
         Returns:
             Dictionary with:
-            - items: List of area dictionaries with area_id, nodes_count, networks_count, is_backbone
+            - items: List of area dicts with area_id, nodes_count, networks_count,
+                     and is_backbone (OSPF only)
         """
         response = self._client.get(f'/graph/{self.graph_time}/areas')
+        return response.json()
+    
+    def edges_list(
+        self,
+        src_node: Optional[str] = None,
+        dst_node: Optional[str] = None,
+        protocol: Optional[str] = None,
+        watcher: Optional[bool] = None,
+        area: Optional[str] = None,
+        page: int = 1,
+        per_page: int = 50,
+        **edge_query_params: Union[str, int, float]
+    ) -> Dict[str, Any]:
+        """Get paginated list of edges with optional filters and TE link attribute querying.
+
+        Supports exact match (e.g. weight=10) and range operators __gt, __lt, __gte, __lte
+        for numeric/float attributes (e.g. temetric__gt=100, unreserved_bw_0__lt=1000000000).
+        TE attributes when present: temetric, admin_group, max_link_bw, max_rsrv_link_bw,
+        unreserved_bw_0 through unreserved_bw_7. IS-IS: isis_level=1 or 2.
+        Arbitrary user-defined attributes (e.g. isp_provider='verizon') are also supported.
+
+        Args:
+            src_node: Filter edges by source node name.
+            dst_node: Filter edges by destination node name.
+            protocol: Graph-level filter (ospf, ospfv3, isis, yaml).
+            watcher: Graph-level filter — True for watcher-uploaded, False for manually parsed.
+            area: Graph-level filter by area (e.g. "0", "0.0.0.1", "49.0001").
+            page: Page number (default: 1).
+            per_page: Items per page (default: 50).
+            **edge_query_params: Per-edge attribute filters. Exact match or range suffix
+                (e.g. weight=10, temetric__gt=100, unreserved_bw_0__lt=1e9).
+
+        Returns:
+            Dictionary with:
+            - items: List of edge dictionaries with src, dst, weight, and optional TE/IS-IS/user attrs
+            - pagination: Dictionary with page, per_page, total, total_pages
+        """
+        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
+        if src_node is not None:
+            params['src_node'] = src_node
+        if dst_node is not None:
+            params['dst_node'] = dst_node
+        if protocol:
+            params['protocol'] = protocol
+        if watcher is not None:
+            params['watcher'] = str(watcher).lower()
+        if area:
+            params['area'] = area
+        params.update(edge_query_params)
+        response = self._client.get(f'/graph/{self.graph_time}/edges', params=params)
         return response.json()
     
     def delete(self) -> None:
@@ -156,83 +222,80 @@ class GraphsManager:
         latest: bool = True,
         protocol: Optional[str] = None,
         area: Optional[str] = None,
-        watcher_name: Optional[str] = None
+        is_monitored: Optional[bool] = None,
+        name: Optional[str] = None,
     ) -> Optional[Graph]:
         """Retrieve a graph.
-        
+
         Args:
             latest: If True, return only the latest graph (default: True)
             protocol: Filter by protocol (ospf, ospfv3, isis, yaml)
             area: Filter by area number
-            watcher_name: Filter by watcher name
-        
+            is_monitored: True = only watcher-received graphs, False = only manually uploaded
+            name: Case-insensitive substring over graph_time or watcher_name
+
         Returns:
             Graph object or None if not found
         """
-        params = {}
+        params: Dict[str, Any] = {}
         if latest:
             params['latest_only'] = True
         if protocol:
             params['protocol'] = protocol
         if area:
             params['area'] = area
-        if watcher_name:
-            params['watcher_name'] = watcher_name
-        
+        if is_monitored is not None:
+            params['is_monitored'] = str(is_monitored).lower()
+        if name:
+            params['name'] = name
+
         response = self._client.get('/graph/', params=params)
-        graphs_data = response.json()
-        
-        if not graphs_data:
-            return None
-        
-        # If latest_only=True, API returns a list but we want the first (latest) one
-        if isinstance(graphs_data, list):
-            if len(graphs_data) == 0:
-                return None
-            return Graph(self._client, graphs_data[0])
-        
-        # If it's a single graph object
-        return Graph(self._client, graphs_data)
-    
+        body = response.json()
+        items = body.get('items', []) if isinstance(body, dict) else (body or [])
+        if items:
+            return Graph(self._client, items[0])
+        return None
+
     def list(
         self,
         protocol: Optional[str] = None,
         area: Optional[str] = None,
-        watcher_name: Optional[str] = None,
-        latest_only: bool = False
+        is_monitored: Optional[bool] = None,
+        name: Optional[str] = None,
+        latest_only: bool = False,
+        page: int = 1,
+        per_page: int = 50,
     ) -> List[Graph]:
         """List graphs with optional filters.
-        
+
         Args:
             protocol: Filter by protocol (ospf, ospfv3, isis, yaml)
             area: Filter by area number
-            watcher_name: Filter by watcher name
-            latest_only: Return only the latest graph for each watcher
-        
+            is_monitored: True = only watcher-received graphs, False = only manually uploaded
+            name: Case-insensitive substring over graph_time or watcher_name (e.g. "before_maintenance")
+            latest_only: Return only the single newest graph among those matching the filters
+            page: Page number, 1-indexed
+            per_page: Items per page
+
         Returns:
-            List of Graph objects
+            List of Graph objects (each exposing is_monitored and is_live)
         """
-        params = {}
+        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
         if protocol:
             params['protocol'] = protocol
         if area:
             params['area'] = area
-        if watcher_name:
-            params['watcher_name'] = watcher_name
+        if is_monitored is not None:
+            params['is_monitored'] = str(is_monitored).lower()
+        if name:
+            params['name'] = name
         if latest_only:
             params['latest_only'] = True
-        
+
         response = self._client.get('/graph/', params=params)
-        graphs_data = response.json()
-        
-        if not graphs_data:
-            return []
-        
-        if isinstance(graphs_data, list):
-            return [Graph(self._client, g) for g in graphs_data]
-        
-        # Single graph
-        return [Graph(self._client, graphs_data)]
+        body = response.json()
+        items = body.get('items', []) if isinstance(body, dict) else (body or [])
+        return [Graph(self._client, g) for g in items]
     
     def get_by_time(self, graph_time: str) -> Graph:
         """Get a specific graph by graph_time.
