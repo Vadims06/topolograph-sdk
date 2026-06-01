@@ -1,3 +1,17 @@
+# Release Notes - topolograph-sdk v0.1.5
+
+## ✨ New
+
+- **`graph.events.get_events_timeline(...)`** — adjacency events grouped into
+  chronological time *waves* (server-side), with a per-wave summary
+  (`pattern` flapping/one_time, `converged`, `density`, `trigger_device`, …).
+  Re-query `get_adjacency_events` with a wave's `start_ts`/`end_ts` for its
+  individual events. Requires Topolograph >= 2.65.
+- **`graph.status()`** now also returns `top_unstable_devices` in `details`
+  (top-N `{device, event_count}` sorted desc).
+
+---
+
 # Release Notes - topolograph-sdk v0.1.1
 
 ## 🎉 Initial Release

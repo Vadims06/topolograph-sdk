@@ -69,7 +69,8 @@ class Graph:
         Returns:
             Dictionary with status information including:
             - status: ok, warning, critical, or no_monitoring_data
-            - details: is_monitored, is_connected, event counts, etc.
+            - details: is_monitored, is_connected, event counts, and
+              top_unstable_devices (top-N {device, event_count} sorted desc)
         """
         response = self._client.get(f'/graph/{self.graph_time}/status')
         return response.json()

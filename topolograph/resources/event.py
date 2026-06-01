@@ -163,5 +163,46 @@ class EventsManager:
             result['adjacency_cost_change_events'] = [
                 Event(e) for e in events_data['adjacency_cost_change_events']
             ]
-        
+
         return result
+
+    def get_events_timeline(
+        self,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        last_minutes: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Get adjacency events grouped into chronological time waves.
+
+        Each wave is a burst of events separated from the next by a calm gap,
+        with a per-wave summary (no nested event arrays). To fetch a wave's
+        individual events, re-query get_adjacency_events with the wave's
+        start_ts/end_ts.
+
+        Args:
+            start_time: Start time in ISO format (e.g., "2025-06-30T20:00:00Z")
+            end_time: End time in ISO format
+            last_minutes: Number of minutes to look back (overrides start_time/end_time)
+
+        Returns:
+            Dictionary with keys:
+            - graph_time, watcher_name
+            - gap_multiplier, median_gap_s: how the grouping was computed
+            - waves: list of wave summaries, each with wave_number, start_ts,
+              end_ts, duration_s, event_count, density, distinct_devices,
+              trigger_device, pattern (flapping/one_time), converged
+        """
+        params = {}
+        if last_minutes:
+            params['last_minutes'] = last_minutes
+        else:
+            if start_time:
+                params['start_time'] = start_time
+            if end_time:
+                params['end_time'] = end_time
+
+        response = self._client.get(
+            f'/events/{self.graph_time}/adjacency/timeline',
+            params=params
+        )
+        return response.json()
