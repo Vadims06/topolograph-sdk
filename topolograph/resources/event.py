@@ -170,29 +170,37 @@ class EventsManager:
         self,
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
-        last_minutes: Optional[int] = None
+        last_minutes: Optional[int] = None,
+        page: int = 1,
+        per_page: int = 20
     ) -> Dict[str, Any]:
         """Get adjacency events grouped into chronological time waves.
 
         Each wave is a burst of events separated from the next by a calm gap,
         with a per-wave summary (no nested event arrays). To fetch a wave's
         individual events, re-query get_adjacency_events with the wave's
-        start_ts/end_ts.
+        start_ts/end_ts. Field reference and pattern (outage/flap/up) meanings:
+        https://docs.topolograph.com/monitoring/events-timeline/
 
         Args:
             start_time: Start time in ISO format (e.g., "2025-06-30T20:00:00Z")
             end_time: End time in ISO format
             last_minutes: Number of minutes to look back (overrides start_time/end_time)
+            page: Page number (1-indexed) over the waves list
+            per_page: Number of waves per page
 
         Returns:
             Dictionary with keys:
             - graph_time, watcher_name
-            - gap_multiplier, median_gap_s: how the grouping was computed
+            - gap_multiplier, median_gap_sec: how the grouping was computed
             - waves: list of wave summaries, each with wave_number, start_ts,
-              end_ts, duration_s, event_count, density, distinct_devices,
-              trigger_device, pattern (flapping/one_time), converged
+              end_ts (ISO 8601, reusable as start_time/end_time), duration_sec,
+              event_count, distinct_devices, trigger_device,
+              pattern (outage/flap/up), converged (recovery seen within the
+              queried window; a recovery after end_time is not counted)
+            - pagination: page, per_page, total, total_pages
         """
-        params = {}
+        params = {'page': page, 'per_page': per_page}
         if last_minutes:
             params['last_minutes'] = last_minutes
         else:
