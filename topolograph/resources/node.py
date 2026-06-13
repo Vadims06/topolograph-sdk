@@ -69,50 +69,48 @@ class NodesManager:
         self._client = client
         self.graph_time = graph_time
     
-    def get(self, name: Optional[str] = None, **query_params) -> List[Node]:
-        """Get nodes from the graph.
-        
+    def get(
+        self,
+        name: Optional[str] = None,
+        protocol: Optional[str] = None,
+        watcher: Optional[bool] = None,
+        area: Optional[str] = None,
+        page: int = 1,
+        per_page: int = 50,
+        **query_params
+    ) -> Dict[str, Any]:
+        """Get paginated nodes from the graph.
+
         Args:
-            name: Optional node name to filter by
-            **query_params: Additional query parameters (e.g., location='dc1', ha_role='primary')
-        
+            name: Optional node name to filter by (exact match on igraph vertex name)
+            protocol: Graph-level filter (ospf, ospfv3, isis, yaml)
+            watcher: Graph-level filter — True for watcher-uploaded, False for manually parsed
+            area: Graph-level filter by area (e.g. "0", "0.0.0.1", "49.0001")
+            page: Page number (default: 1)
+            per_page: Items per page (default: 50)
+            **query_params: Additional flat vertex attribute filters, e.g. location='dc1',
+                or node role flags abr=1 / asbr=1 (OSPF), overload=1 / attached=1 (IS-IS)
+
         Returns:
-            List of Node objects
+            Dictionary with:
+            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
+                     pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
+                     (role flags: abr/asbr for OSPF, overload/attached for IS-IS)
+            - pagination: Dictionary with page, per_page, total, total_pages
         """
-        params = {}
+        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
         if name:
             params['name'] = name
-        # Add query params directly - API accepts them as individual query parameters
-        # For deepObject style, we need to format them properly
-        if query_params:
-            # Format as node_query_params[location]=dc1&node_query_params[ha_role]=primary
-            for key, value in query_params.items():
-                params[f'node_query_params[{key}]'] = value
-        
-        response = self._client.get(
-            f'/diagram/{self.graph_time}/nodes',
-            params=params
-        )
-        nodes_data = response.json()
-        
-        if not nodes_data:
-            return []
-        
-        # Handle different response formats
-        if isinstance(nodes_data, list):
-            return [Node(node, manager=self) for node in nodes_data]
-        elif isinstance(nodes_data, dict):
-            # If it's a dict, convert to list of nodes
-            nodes = []
-            for node_id, node_data in nodes_data.items():
-                if isinstance(node_data, dict):
-                    node_data['id'] = node_id
-                    nodes.append(Node(node_data, manager=self))
-                else:
-                    nodes.append(Node({'id': node_id, 'name': node_data}, manager=self))
-            return nodes
-        
-        return [Node(nodes_data, manager=self)]
+        if protocol:
+            params['protocol'] = protocol
+        if watcher is not None:
+            params['watcher'] = str(watcher).lower()
+        if area:
+            params['area'] = area
+        params.update(query_params)
+
+        response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
+        return response.json()
     
     def get_by_id(self, node_id: int) -> Optional[Node]:
         """Get a specific node by ID.

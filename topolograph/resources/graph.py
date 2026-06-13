@@ -108,6 +108,10 @@ class Graph:
         protocol: Optional[str] = None,
         watcher: Optional[bool] = None,
         area: Optional[str] = None,
+        abr: Optional[bool] = None,
+        asbr: Optional[bool] = None,
+        overload: Optional[bool] = None,
+        attached: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Get paginated list of nodes/routers.
 
@@ -117,11 +121,16 @@ class Graph:
             protocol: Filter — only return if graph matches protocol (ospf, ospfv3, isis, yaml)
             watcher: Filter — True for watcher-uploaded graphs, False for manually parsed
             area: Filter — only return if graph contains this area (e.g. "0", "0.0.0.1", "49.0001")
+            abr: OSPF role filter — True for Area Border Routers only (False for non-ABRs)
+            asbr: OSPF role filter — True for AS Boundary Routers only (False for non-ASBRs)
+            overload: IS-IS filter — True for routers with the overload (OL) bit set
+            attached: IS-IS filter — True for routers with the attached (ATT) bit set
 
         Returns:
             Dictionary with:
             - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
-                     pseudo_rid (IS-IS), networks_count, areas, is_isis
+                     pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
+                     (role flags: abr/asbr for OSPF, overload/attached for IS-IS)
             - pagination: Dictionary with page, per_page, total, total_pages
         """
         params: Dict[str, Any] = {'page': page, 'per_page': per_page}
@@ -131,6 +140,9 @@ class Graph:
             params['watcher'] = str(watcher).lower()
         if area:
             params['area'] = area
+        for flag_name, flag_value in (('abr', abr), ('asbr', asbr), ('overload', overload), ('attached', attached)):
+            if flag_value is not None:
+                params[flag_name] = int(flag_value)
         response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
         return response.json()
     
