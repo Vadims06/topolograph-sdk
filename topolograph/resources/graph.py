@@ -112,6 +112,7 @@ class Graph:
         asbr: Optional[bool] = None,
         overload: Optional[bool] = None,
         attached: Optional[bool] = None,
+        maxmetric: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Get paginated list of nodes/routers.
 
@@ -125,12 +126,13 @@ class Graph:
             asbr: OSPF role filter — True for AS Boundary Routers only (False for non-ASBRs)
             overload: IS-IS filter — True for routers with the overload (OL) bit set
             attached: IS-IS filter — True for routers with the attached (ATT) bit set
+            maxmetric: OSPF filter — True for routers in max-metric (RFC 3137 stub router) state
 
         Returns:
             Dictionary with:
             - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
                      pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
-                     (role flags: abr/asbr for OSPF, overload/attached for IS-IS)
+                     (role flags: abr/asbr/maxmetric for OSPF, overload/attached for IS-IS)
             - pagination: Dictionary with page, per_page, total, total_pages
         """
         params: Dict[str, Any] = {'page': page, 'per_page': per_page}
@@ -140,7 +142,7 @@ class Graph:
             params['watcher'] = str(watcher).lower()
         if area:
             params['area'] = area
-        for flag_name, flag_value in (('abr', abr), ('asbr', asbr), ('overload', overload), ('attached', attached)):
+        for flag_name, flag_value in (('abr', abr), ('asbr', asbr), ('overload', overload), ('attached', attached), ('maxmetric', maxmetric)):
             if flag_value is not None:
                 params[flag_name] = int(flag_value)
         response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
