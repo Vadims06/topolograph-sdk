@@ -15,7 +15,8 @@ class Path:
         self.paths = data.get('spt_path_nodes_name_as_ll_in_ll', [])
         self.cost = data.get('cost')
         self.unbackup_paths = data.get('unbackup_paths_nodes_name_as_ll_in_ll', [])
-    
+        self.overload = data.get('overload')
+
     def __repr__(self) -> str:
         return f"Path(cost={self.cost}, paths={len(self.paths)})"
 
