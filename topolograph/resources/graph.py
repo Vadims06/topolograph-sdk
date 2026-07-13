@@ -340,16 +340,18 @@ class GraphsManager:
         lsdb_data: str,
         vendor: str,
         protocol: str,
-        watcher_name: Optional[str] = None
+        watcher_name: Optional[str] = None,
+        graph_description: Optional[str] = None
     ) -> Graph:
         """Upload a raw LSDB and create a new graph.
-        
+
         Args:
             lsdb_data: Raw LSDB text output
             vendor: Vendor name (e.g., 'Cisco', 'Juniper', 'FRR')
             protocol: Protocol name (ospf, ospfv3, isis)
             watcher_name: Optional watcher name
-        
+            graph_description: Optional human-readable suffix to tell saved graphs apart
+
         Returns:
             Graph object with diff information
         """
@@ -360,7 +362,9 @@ class GraphsManager:
         }
         if watcher_name:
             payload['watcher_name'] = watcher_name
-        
+        if graph_description:
+            payload['graph_description'] = graph_description
+
         response = self._client.post('/graph/', json=payload)
         return Graph(self._client, response.json())
     

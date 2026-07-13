@@ -218,6 +218,7 @@ def upload(
     vendor: str = typer.Option(..., "--vendor", "-v", help="Vendor name (e.g., Cisco, Juniper)"),
     protocol: str = typer.Option(..., "--protocol", "-p", help="Protocol (ospf, ospfv3, isis)"),
     watcher: Optional[str] = typer.Option(None, "--watcher", "-w", help="Watcher name"),
+    description: Optional[str] = typer.Option(None, "--description", "-d", help="Human-readable suffix to tell saved graphs apart"),
     url: Optional[str] = typer.Option(None, "--url", help="Topolograph API URL"),
     token: Optional[str] = typer.Option(None, "--token", "-t", help="API token"),
 ):
@@ -237,7 +238,8 @@ def upload(
             lsdb_text=lsdb_text,
             vendor=vendor,
             protocol=protocol,
-            watcher_name=watcher
+            watcher_name=watcher,
+            graph_description=description
         )
         
         console.print(f"[green]Upload successful![/green]")

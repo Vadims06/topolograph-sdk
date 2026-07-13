@@ -24,16 +24,18 @@ class Uploader:
         lsdb_text: str,
         vendor: str,
         protocol: str,
-        watcher_name: Optional[str] = None
+        watcher_name: Optional[str] = None,
+        graph_description: Optional[str] = None
     ) -> Graph:
         """Upload raw LSDB text to Topolograph.
-        
+
         Args:
             lsdb_text: Raw LSDB text output
             vendor: Vendor name (e.g., 'Cisco', 'Juniper', 'FRR')
             protocol: Protocol name (ospf, ospfv3, isis)
             watcher_name: Optional watcher name
-        
+            graph_description: Optional human-readable suffix to tell saved graphs apart
+
         Returns:
             Graph object with diff information
         """
@@ -68,10 +70,12 @@ class Uploader:
         }
         if watcher_name:
             payload['watcher_name'] = watcher_name
-        
+        if graph_description:
+            payload['graph_description'] = graph_description
+
         response = self._client.post('/graph/', json=payload)
         return Graph(self._client, response.json())
-    
+
     def upload_multi(self, lsdb_array: List[Dict[str, Any]]) -> Graph:
         """Upload multiple LSDB files to Topolograph.
         
