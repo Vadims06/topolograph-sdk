@@ -234,8 +234,18 @@ class Graph:
         """Get MPLS TE LSP tunnels attached to this graph.
 
         Each returned path carries its last CSPF placement outcome: placed
-        (bool), reason (why placement failed, null when placed), cost (total
-        path metric, null when unplaced).
+        (bool), reason (human-readable explanation, null when placed),
+        reason_code (failure category, null when placed), binding_constraints
+        (which constraints block it), cost (total path metric, null when
+        unplaced).
+
+        reason_code distinguishes the two failures that need opposite fixes:
+        'disconnected' means no path exists even with every constraint lifted,
+        so the topology must be repaired; 'constraints_unsatisfiable' means a
+        path exists but the request is too strict, so relax the constraints
+        named in binding_constraints ('bandwidth', 'affinity', 'srlg'). More
+        than one entry means they block only in combination. Other values:
+        'ero_strict_hop_unreachable', 'endpoint_not_found'.
 
         Args:
             status: 'placed' or 'unplaced' — keep only paths matching.
@@ -301,7 +311,9 @@ class Graph:
         Returns:
             Dictionary with 'path' (list of node names, empty if none satisfies
             the constraints), 'cost' (null if unplaced), 'reason' (why
-            placement failed; empty string on success).
+            placement failed; empty string on success). The reason tells a
+            severed topology apart from an over-strict request, so it is never
+            attributed to the constraints when no path exists without them.
         """
         params: Dict[str, Any] = {'metric_type': metric_type, 'setup_priority': setup_priority}
         if bandwidth:
