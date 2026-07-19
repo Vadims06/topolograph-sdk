@@ -3,11 +3,13 @@
 import os
 import pytest
 from topolograph import Topolograph, TopologyCollector
+from topolograph.exceptions import NotFoundError
 
 
 # Test configuration
 API_URL = os.environ.get('TOPOLOGRAPH_URL', 'http://localhost:8080')
 API_TOKEN = os.environ.get('TOPOLOGRAPH_TOKEN')
+GRAPH_TIME = os.environ.get('TOPOLOGRAPH_GRAPH_TIME')
 INVENTORY_PATH = os.path.join(os.path.dirname(__file__), 'fixtures', 'inventory.yaml')
 
 
@@ -155,6 +157,32 @@ class TestSDKIntegration:
             first_network = networks[0]
             found = graph.networks.find_by_network(first_network.network)
             assert found is not None
+
+    def test_edges_list(self, client):
+        """Test getting edges from diagram (all edges or filtered by src/dst)."""
+        try:
+            graph = client.graphs.get_by_time(GRAPH_TIME) if GRAPH_TIME else client.graphs.get(latest=True)
+        except NotFoundError:
+            pytest.skip("Graph not found (check TOPOLOGRAPH_GRAPH_TIME or have a latest graph)")
+        if not graph:
+            pytest.skip("No graph available (set TOPOLOGRAPH_GRAPH_TIME or have a latest graph)")
+        result = graph.edges_list()
+        assert "items" in result
+        assert "pagination" in result
+        assert isinstance(result["items"], list)
+
+    def test_edges_list_te_query(self, client):
+        """Test edges_list with TE link attribute range query params (temetric, unreserved_bw_*, etc.)."""
+        try:
+            graph = client.graphs.get_by_time(GRAPH_TIME) if GRAPH_TIME else client.graphs.get(latest=True)
+        except NotFoundError:
+            pytest.skip("Graph not found (check TOPOLOGRAPH_GRAPH_TIME or have a latest graph)")
+        if not graph:
+            pytest.skip("No graph available (set TOPOLOGRAPH_GRAPH_TIME or have a latest graph)")
+        result = graph.edges_list(temetric__gte=0)
+        assert "items" in result
+        result_bw = graph.edges_list(unreserved_bw_0__lt=1e12)
+        assert "items" in result_bw
 
 
 if __name__ == "__main__":

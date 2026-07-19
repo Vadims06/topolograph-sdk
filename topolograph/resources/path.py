@@ -1,14 +1,14 @@
 """Path resource for Topolograph API."""
 
-from typing import Optional, List, Tuple
+from typing import List, Tuple
 
 
 class Path:
     """Represents a shortest path result."""
-    
+
     def __init__(self, data: dict):
         """Initialize a Path object.
-        
+
         Args:
             data: Path data from API
         """
@@ -23,75 +23,75 @@ class Path:
 
 class PathsManager:
     """Manager for path computation."""
-    
+
     def __init__(self, client, graph_time: str):
         """Initialize the PathsManager.
-        
+
         Args:
             client: Topolograph client instance
             graph_time: Graph time identifier
         """
         self._client = client
         self.graph_time = graph_time
-    
-    def shortest(
-        self,
-        src_node: str,
-        dst_node: str,
-        removed_edges: Optional[List[Tuple[str, str]]] = None
-    ) -> Path:
-        """Compute shortest path between two nodes.
-        
+
+    def shortest(self, src_node: str, dst_node: str, with_lsps: bool = False) -> Path:
+        """Compute the shortest path between two nodes.
+
+        Plain IGP shortest path by default. For "what if this link is down"
+        backup-path analysis, use `edge_failure_reaction` instead -- that
+        question now has its own endpoint (whole-network impact, not just a
+        recomputed path).
+
         Args:
             src_node: Source node identifier
             dst_node: Destination node identifier
-            removed_edges: Optional list of (src, dst) tuples representing
-                          edges to remove for backup path calculation
-        
+            with_lsps: If True, account for autoroute-enabled MPLS-TE tunnels
+                as forwarding shortcuts -- the path traffic actually takes
+                given the tunnels currently in the graph, not the plain IGP
+                path. Off by default (a signaled LSP does not redirect
+                traffic on its own without autoroute configured on the tunnel).
+
         Returns:
             Path object
         """
-        payload = {
-            'graph_time': self.graph_time,
-            'src_node': src_node,
-            'dst_node': dst_node
-        }
-        
-        if removed_edges:
-            payload['removedEdgesAsNodePairsFromSptPath_ll_in_ll'] = [
-                [src, dst] for src, dst in removed_edges
-            ]
-        
-        response = self._client.post('/path/', json=payload)
+        params = {'with_lsps': 'true'} if with_lsps else {}
+        response = self._client.get(
+            f'/graph/{self.graph_time}/path/{src_node}/{dst_node}', params=params)
         return Path(response.json())
-    
-    def shortest_network(
-        self,
-        src_ip_or_network: str,
-        dst_ip_or_network: str,
-        removed_edges: Optional[List[Tuple[str, str]]] = None
-    ) -> Path:
-        """Compute shortest path between two IP addresses or networks.
-        
+
+    def shortest_network(self, src_ip_or_network: str, dst_ip_or_network: str) -> Path:
+        """Compute the shortest path between two IP addresses or networks.
+
         Args:
             src_ip_or_network: Source IP address or network
             dst_ip_or_network: Destination IP address or network
-            removed_edges: Optional list of (src, dst) tuples representing
-                          edges to remove for backup path calculation
-        
+
         Returns:
             Path object
         """
+        params = {
+            'src_ip_or_network': src_ip_or_network,
+            'dst_ip_or_network': dst_ip_or_network,
+        }
+        response = self._client.get(f'/graph/{self.graph_time}/path/network', params=params)
+        return Path(response.json())
+
+    def edge_failure_reaction(self, failed_edges: List[Tuple[str, str]]) -> dict:
+        """Predict the whole-network impact if one or more links go down.
+
+        Same shape as a node-failure prediction, for links instead of nodes.
+
+        Args:
+            failed_edges: List of (src, dst) node-name tuples identifying each failed link
+
+        Returns:
+            Dictionary with 'isGraphStillConnected', 'affectedLinks'
+            (sptPathsIncreasedInPercent/sptPathsDecreasedInPercent), and
+            'disjointedNodes' (list of node-name groups, if the graph split)
+        """
         payload = {
             'graph_time': self.graph_time,
-            'src_ip_or_network': src_ip_or_network,
-            'dst_ip_or_network': dst_ip_or_network
+            'failed_edges_list': [[src, dst] for src, dst in failed_edges],
         }
-        
-        if removed_edges:
-            payload['removedEdgesAsNodePairsFromSptPath_ll_in_ll'] = [
-                [src, dst] for src, dst in removed_edges
-            ]
-        
-        response = self._client.post('/path/network/', json=payload)
-        return Path(response.json())
+        response = self._client.post('/network_reaction/edge_failure/', json=payload)
+        return response.json()

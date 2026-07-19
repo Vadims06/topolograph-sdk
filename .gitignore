@@ -45,6 +45,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Secrets / local env
+.env
+
 # Virtual environments
 venv/
 env/

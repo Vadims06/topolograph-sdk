@@ -170,6 +170,7 @@ class Graph:
         protocol: Optional[str] = None,
         watcher: Optional[bool] = None,
         area: Optional[str] = None,
+        include: Optional[List[str]] = None,
         page: int = 1,
         per_page: int = 50,
         **edge_query_params: Union[str, int, float]
@@ -188,6 +189,13 @@ class Graph:
             protocol: Graph-level filter (ospf, ospfv3, isis, yaml).
             watcher: Graph-level filter — True for watcher-uploaded, False for manually parsed.
             area: Graph-level filter by area (e.g. "0", "0.0.0.1", "49.0001").
+            include: Extra MPLS-TE fields, hidden by default: 'lsp_left_bw' (how much TE
+                bandwidth is left per edge after accounting for placed LSP tunnels —
+                lsp_left_bw_0..7 plus a human-readable lsp_reserved_bw/lsp_left_bw/
+                lsp_bandwidth_usage pair at the default priority-7 pool), 'lsps' (which
+                LSP tunnels traverse this edge), 'is_te_link' (whether the edge is
+                TE-enabled), 'edge_key' (stable identity, needed for lsps_list(via_edge_key=)
+                on parallel/ECMP edges).
             page: Page number (default: 1).
             per_page: Items per page (default: 50).
             **edge_query_params: Per-edge attribute filters. Exact match or range suffix
@@ -209,8 +217,105 @@ class Graph:
             params['watcher'] = str(watcher).lower()
         if area:
             params['area'] = area
+        if include:
+            params['include'] = ','.join(include)
         params.update(edge_query_params)
         response = self._client.get(f'/graph/{self.graph_time}/edges', params=params)
+        return response.json()
+
+    def lsps_list(
+        self,
+        status: Optional[str] = None,
+        via_node: Optional[str] = None,
+        via_edge: Optional[str] = None,
+        via_edge_key: Optional[str] = None,
+        include_path: bool = False,
+    ) -> Dict[str, Any]:
+        """Get MPLS TE LSP tunnels attached to this graph.
+
+        Each returned path carries its last CSPF placement outcome: placed
+        (bool), reason (why placement failed, null when placed), cost (total
+        path metric, null when unplaced).
+
+        Args:
+            status: 'placed' or 'unplaced' — keep only paths matching.
+            via_node: Keep only paths whose CSPF-computed path visits this node.
+            via_edge: 'srcNode,dstNode' — keep only paths traversing this hop.
+            via_edge_key: Exact stable edge_key (from edges_list(include=['edge_key']))
+                — disambiguates parallel/ECMP edges that via_edge alone cannot.
+            include_path: Also return each path's expanded node-name path
+                (omitted by default to keep the list light with many tunnels).
+        """
+        params: Dict[str, Any] = {}
+        if status:
+            params['status'] = status
+        if via_node:
+            params['via_node'] = via_node
+        if via_edge:
+            params['via_edge'] = via_edge
+        if via_edge_key:
+            params['via_edge_key'] = via_edge_key
+        if include_path:
+            params['include'] = 'path'
+        kwargs = {'params': params} if params else {}
+        return self._client.get(f'/graph/{self.graph_time}/lsps', **kwargs).json()
+
+    def lsp(self, name: str) -> Dict[str, Any]:
+        """Get one MPLS TE LSP tunnel by name (always includes each path's expanded path)."""
+        return self._client.get(f'/graph/{self.graph_time}/lsps/{name}').json()
+
+    def add_lsp(self, lsp: Dict[str, Any]) -> Dict[str, Any]:
+        """Add an MPLS TE LSP tunnel."""
+        return self._client.post(f'/graph/{self.graph_time}/lsps', json=lsp).json()
+
+    def update_lsp(self, name: str, **changes: Any) -> Dict[str, Any]:
+        """Update or rename an MPLS TE LSP tunnel."""
+        return self._client.patch(f'/graph/{self.graph_time}/lsps/{name}', json=changes).json()
+
+    def delete_lsp(self, name: str) -> Dict[str, Any]:
+        """Delete one MPLS TE LSP tunnel."""
+        return self._client.delete(f'/graph/{self.graph_time}/lsps/{name}').json()
+
+    def delete_lsps(self) -> Dict[str, Any]:
+        """Delete all MPLS TE LSP tunnels attached to this graph."""
+        return self._client.delete(f'/graph/{self.graph_time}/lsps').json()
+
+    def cspf_path(
+        self,
+        node_a: str,
+        node_b: str,
+        bandwidth: Optional[str] = None,
+        metric_type: str = 'igp',
+        admin_exclude_any: Optional[List[str]] = None,
+        admin_include_any: Optional[List[str]] = None,
+        admin_include_all: Optional[List[str]] = None,
+        srlg_exclude: Optional[List[int]] = None,
+        setup_priority: int = 7,
+    ) -> Dict[str, Any]:
+        """Constrained-shortest-path (CSPF) feasibility check between two nodes.
+
+        On-demand computation, same class as `paths.shortest` — just over a
+        graph pre-filtered by the given TE constraints instead of the plain
+        one. No tunnel is created or persisted.
+
+        Returns:
+            Dictionary with 'path' (list of node names, empty if none satisfies
+            the constraints), 'cost' (null if unplaced), 'reason' (why
+            placement failed; empty string on success).
+        """
+        params: Dict[str, Any] = {'metric_type': metric_type, 'setup_priority': setup_priority}
+        if bandwidth:
+            params['bandwidth'] = bandwidth
+        if admin_exclude_any:
+            params['admin_exclude_any'] = ','.join(admin_exclude_any)
+        if admin_include_any:
+            params['admin_include_any'] = ','.join(admin_include_any)
+        if admin_include_all:
+            params['admin_include_all'] = ','.join(admin_include_all)
+        if srlg_exclude:
+            params['srlg_exclude'] = ','.join(str(value) for value in srlg_exclude)
+        response = self._client.get(
+            f'/graph/{self.graph_time}/cspf-path/{node_a}/{node_b}', params=params)
         return response.json()
     
     def delete(self) -> None:
