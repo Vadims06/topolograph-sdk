@@ -12,6 +12,7 @@ from .exceptions import (
     ValidationError,
 )
 from .resources.graph import GraphsManager
+from .resources.bgp import BgpGraphsManager
 from .upload.uploader import Uploader
 
 
@@ -70,14 +71,22 @@ class Topolograph:
         
         # Initialize resource managers
         self._graphs_manager = None
+        self._bgp_graphs_manager = None
         self._uploader = None
-    
+
     @property
     def graphs(self) -> GraphsManager:
         """Get graphs resource manager."""
         if self._graphs_manager is None:
             self._graphs_manager = GraphsManager(self)
         return self._graphs_manager
+
+    @property
+    def bgp_graphs(self) -> BgpGraphsManager:
+        """Get BGP graph resource manager."""
+        if self._bgp_graphs_manager is None:
+            self._bgp_graphs_manager = BgpGraphsManager(self)
+        return self._bgp_graphs_manager
     
     @property
     def uploader(self) -> Uploader:

@@ -218,6 +218,39 @@ adjacency_events = graph.events.get_adjacency_events(
 )
 ```
 
+### BGP topology
+
+Requires Topolograph >= 2.69.
+
+```python
+# List BGP epochs, take the newest
+bgp = client.bgp_graphs.get_latest()
+
+# Speakers and sessions
+bgp.nodes.list(role="rr")
+bgp.sessions.list(bgp_session_type="ebgp")
+
+# Route table (one row per RFC 4271 9.1 path); pass router_id to scope it
+# to that router's resolved RIB view
+bgp.routes.search(prefix="10.0.0.0/24", community="65000:100")
+bgp.routes.search(router_id="1.1.1.1", ribs="loc-rib")
+bgp.routes.summary("1.1.1.1")
+
+# Point-in-time state and a two-timestamp diff
+bgp.routes.state(at="2026-08-30T10:00:00Z")
+bgp.routes.compare("2026-08-30T09:00:00Z", "2026-08-30T10:00:00Z")
+
+# BGP change events, IGP bindings
+bgp.events.timeline(last_minutes=15)
+bgp.igp_bindings.list()
+
+# VRF inventory for an IGP graph's routers
+graph.vrfs(router_id="1.1.1.1")
+
+# Protocol-aware path resolution (static/BGP/IGP/LSP hand-off)
+graph.paths.resolve_route("R1", "8.8.8.8", vrf="BLUE")
+```
+
 ## CLI Usage
 
 The SDK includes a CLI tool accessible via the `topo` command:

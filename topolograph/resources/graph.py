@@ -163,6 +163,41 @@ class Graph:
         response = self._client.get(f'/graph/{self.graph_time}/areas')
         return response.json()
     
+    def vrfs(
+        self,
+        router_id: Optional[str] = None,
+        rd: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """VRF inventory for this graph's routers, as of the graph timestamp.
+
+        Args:
+            router_id: keep only VRFs on this router.
+            rd: keep only VRFs with this route distinguisher.
+
+        Returns:
+            Dictionary with 'items': list of VRF dicts (name, router_id, rd,
+            families with import/export route targets).
+        """
+        params: Dict[str, Any] = {}
+        if router_id:
+            params['router_id'] = router_id
+        if rd:
+            params['rd'] = rd
+        response = self._client.get(f'/graph/{self.graph_time}/vrfs', params=params)
+        return response.json()
+
+    def vpn_routers(self) -> Dict[str, Any]:
+        """Routers the BGP epochs bound to this graph know, each with the
+        vantage its table is observed at.
+
+        Returns:
+            Dictionary with 'items': list of dicts with router_id, vpn_count,
+            evidence (loc_rib | adj_rib_in | loc_rib_reflected | adj_rib_out),
+            can_build_path, assumptions. Use these as `start_node` for
+            paths.resolve_route on a VPN destination.
+        """
+        return self._client.get(f'/graph/{self.graph_time}/vpn-routers').json()
+
     def edges_list(
         self,
         src_node: Optional[str] = None,

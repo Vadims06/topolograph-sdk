@@ -1,6 +1,6 @@
 """Path resource for Topolograph API."""
 
-from typing import List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class Path:
@@ -75,6 +75,52 @@ class PathsManager:
         }
         response = self._client.get(f'/graph/{self.graph_time}/path/network', params=params)
         return Path(response.json())
+
+    def resolve_route(
+        self,
+        start_node: str,
+        destination: str,
+        rt: Optional[str] = None,
+        vrf: Optional[str] = None,
+        rd: Optional[str] = None,
+        evidence: Optional[str] = None,
+        with_lsps: bool = True,
+        changed_edge_costs: Optional[Dict[str, int]] = None,
+    ) -> Dict[str, Any]:
+        """Protocol-aware path resolution: walk start_node toward destination,
+        handing off between static/BGP/IGP/LSP wherever one overrides the plain
+        SPF path. One row per routing decision.
+
+        Args:
+            start_node: router the walk starts from.
+            destination: a router ID or a free-typed prefix.
+            rt / vrf / rd: name the VPN to resolve in; only `rt` identifies it
+                across PEs, the other two are resolved to it. Omit for the
+                global table.
+            evidence: which table the answer rests on when the start router's
+                RIB is not observed directly -- pre_policy, post_policy,
+                loc_rib (default) or fib.
+            with_lsps: account for autoroute MPLS-TE tunnels as shortcuts.
+            changed_edge_costs: cost planning, {igraph edge id: new metric}.
+
+        Returns:
+            Resolution result: one leg per routing decision, plus `evidence`
+            naming what the answer rests on.
+        """
+        body: Dict[str, Any] = {"destination": destination, "with_lsps": with_lsps}
+        if rt is not None:
+            body["rt"] = rt
+        if vrf is not None:
+            body["vrf"] = vrf
+        if rd is not None:
+            body["rd"] = rd
+        if evidence is not None:
+            body["evidence"] = evidence
+        if changed_edge_costs:
+            body["changed_edge_costs"] = changed_edge_costs
+        response = self._client.post(
+            f'/graph/{self.graph_time}/route-resolution/{start_node}', json=body)
+        return response.json()
 
     def edge_failure_reaction(self, failed_edges: List[Tuple[str, str]]) -> dict:
         """Predict the whole-network impact if one or more links go down.

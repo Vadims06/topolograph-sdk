@@ -6,17 +6,17 @@ class TopolographError(Exception):
     pass
 
 
-class AuthenticationError(TopolographError):
-    """Raised when authentication fails."""
-    pass
-
-
 class APIError(TopolographError):
     """Raised when an API request fails."""
     def __init__(self, message, status_code=None, response=None):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
+
+
+class AuthenticationError(APIError):
+    """Raised when authentication fails (401)."""
+    pass
 
 
 class NotFoundError(APIError):
