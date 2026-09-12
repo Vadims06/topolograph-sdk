@@ -130,7 +130,8 @@ class Graph:
 
         Returns:
             Dictionary with:
-            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
+            - items: List of node dictionaries with node_id (canonical graph name),
+                     display_name (human-readable text), hostname, systemid (IS-IS),
                      pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
                      (role flags: abr/asbr/maxmetric for OSPF, overload/attached for IS-IS)
             - pagination: Dictionary with page, per_page, total, total_pages

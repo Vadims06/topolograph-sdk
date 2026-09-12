@@ -2,6 +2,8 @@
 
 from typing import Optional, List, Dict, Any
 
+from ..exceptions import NotFoundError
+
 
 class Node:
     """Represents a network node in a Topolograph graph."""
@@ -93,7 +95,8 @@ class NodesManager:
 
         Returns:
             Dictionary with:
-            - items: List of node dictionaries with node_id, hostname, systemid (IS-IS),
+            - items: List of node dictionaries with node_id (canonical graph name),
+                     display_name (human-readable text), hostname, systemid (IS-IS),
                      pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
                      (role flags: abr/asbr for OSPF, overload/attached for IS-IS)
             - pagination: Dictionary with page, per_page, total, total_pages
@@ -112,29 +115,33 @@ class NodesManager:
         response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
         return response.json()
     
-    def get_by_id(self, node_id: int) -> Optional[Node]:
+    def get_by_id(self, node_id: str) -> Optional[Node]:
         """Get a specific node by ID.
-        
+
         Args:
-            node_id: Node ID
-        
+            node_id: Canonical node name, IS-IS System ID, discovered hostname,
+                or operator display override, matched case-insensitively.
+
         Returns:
             Node object or None if not found
         """
         try:
             response = self._client.get(f'/diagram/{self.graph_time}/nodes/{node_id}')
-            node_data = response.json()
-            if isinstance(node_data, dict):
-                node_data['id'] = node_id
-            return Node(node_data, manager=self)
-        except Exception:
+        except NotFoundError:
             return None
+        node_data = response.json()
+        if isinstance(node_data, dict) and 'id' not in node_data:
+            # older servers (pre-canonical-id) don't echo an id -- fall back
+            # to what was requested rather than leaving it unset.
+            node_data['id'] = node_id
+        return Node(node_data, manager=self)
     
-    def update(self, node_id: int, attributes: Dict[str, Any]) -> Node:
+    def update(self, node_id: str, attributes: Dict[str, Any]) -> Node:
         """Completely replace all attributes of a node (PUT).
-        
+
         Args:
-            node_id: Node ID to update
+            node_id: Canonical node name, IS-IS System ID, hostname, or display
+                override, matched case-insensitively.
             attributes: Dictionary of attributes to set. Must include 'name' if updating name.
                        Example: {'name': 'new_name', 'location': 'dc1', 'role': 'router'}
         
@@ -149,14 +156,17 @@ class NodesManager:
             f'/diagram/{self.graph_time}/nodes/{node_id}',
             json=attributes
         )
-        # API returns success message, fetch updated node
-        return self.get_by_id(node_id)
+        # API returns a success message, not the updated node -- refetch by the
+        # new canonical name when this call renamed it, else the old id/alias
+        # still resolves.
+        return self.get_by_id(attributes.get('name', node_id))
     
-    def patch(self, node_id: int, attributes: Dict[str, Any]) -> Node:
+    def patch(self, node_id: str, attributes: Dict[str, Any]) -> Node:
         """Partially update attributes of a node (PATCH).
-        
+
         Args:
-            node_id: Node ID to update
+            node_id: Canonical node name, IS-IS System ID, hostname, or display
+                override, matched case-insensitively.
             attributes: Dictionary of attributes to update (only specified attributes are changed).
                        Example: {'name': 'new_name'} or {'location': 'dc2', 'role': 'switch'}
         
@@ -171,5 +181,7 @@ class NodesManager:
             f'/diagram/{self.graph_time}/nodes/{node_id}',
             json=attributes
         )
-        # API returns success message, fetch updated node
-        return self.get_by_id(node_id)
+        # API returns a success message, not the updated node -- refetch by the
+        # new canonical name when this call renamed it, else the old id/alias
+        # still resolves.
+        return self.get_by_id(attributes.get('name', node_id))
