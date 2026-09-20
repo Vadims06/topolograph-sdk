@@ -90,6 +90,28 @@ def test_cspf_path_builds_query_params():
     }
 
 
+def test_cspf_path_level_param():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.cspf_path('R1', 'R3', level=1)
+
+    ((method, path, kwargs),) = client.calls
+    assert method == 'get'
+    assert path == '/graph/graph-time/cspf-path/R1/R3'
+    assert kwargs['params']['level'] == 1
+
+
+def test_cspf_path_without_level_omits_query_param():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.cspf_path('R1', 'R3')
+
+    ((method, path, kwargs),) = client.calls
+    assert 'level' not in kwargs['params']
+
+
 def test_paths_shortest_without_with_lsps_omits_query_param():
     client = _Client()
     graph = Graph(client, {'graph_time': 'graph-time'})

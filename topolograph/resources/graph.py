@@ -337,12 +337,28 @@ class Graph:
         admin_include_all: Optional[List[str]] = None,
         srlg_exclude: Optional[List[int]] = None,
         setup_priority: int = 7,
+        level: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Constrained-shortest-path (CSPF) feasibility check between two nodes.
 
         On-demand computation, same class as `paths.shortest` — just over a
         graph pre-filtered by the given TE constraints instead of the plain
         one. No tunnel is created or persisted.
+
+        Args:
+            admin_exclude_any: Admin groups to avoid. On an IS-IS graph a group is the
+                number of a bit of the link's admin group mask, bit 0 being the least
+                significant: ['2'] avoids links with mask 0x00000004. On a YAML diagram
+                it is an affinity name.
+            admin_include_any: Admin groups of which a link must carry at least one.
+            admin_include_all: Admin groups a link must all carry.
+            level: Restrict the path to IS-IS level 1 or 2 (RFC 1195 S1.2: L1
+                and L2 are independent topologies, so a link whose TE data was
+                only advertised at the other level cannot carry a real
+                single-level RSVP-TE session). Omit for no level restriction.
+                No effect on a non-IS-IS graph. Raises on a graph that cannot
+                answer an explicit level exactly (predates per-level IS-IS
+                storage, or is a YAML diagram).
 
         Returns:
             Dictionary with 'path' (list of node names, empty if none satisfies
@@ -362,6 +378,8 @@ class Graph:
             params['admin_include_all'] = ','.join(admin_include_all)
         if srlg_exclude:
             params['srlg_exclude'] = ','.join(str(value) for value in srlg_exclude)
+        if level is not None:
+            params['level'] = level
         response = self._client.get(
             f'/graph/{self.graph_time}/cspf-path/{node_a}/{node_b}', params=params)
         return response.json()
