@@ -260,9 +260,80 @@ class Graph:
             params['area'] = area
         if include:
             params['include'] = ','.join(include)
+        if is_te_link is not None:
+            params['is_te_link'] = str(is_te_link).lower()
         params.update(edge_query_params)
         response = self._client.get(f'/graph/{self.graph_time}/edges', params=params)
         return response.json()
+
+    def edge(self, edge_id: int) -> Dict[str, Any]:
+        """Get one edge of the diagram with all its attributes.
+
+        Args:
+            edge_id: The `id` an `edges_list` item carries.
+
+        Raises:
+            NotFoundError: If the graph has no edge with this id.
+        """
+        return self._client.get(f'/diagram/{self.graph_time}/edges/{edge_id}').json()
+
+    def add_edge(self, src: str, dst: str, **attributes: Any) -> Dict[str, Any]:
+        """Add an edge between two existing nodes.
+
+        Args:
+            src: Source node name.
+            dst: Destination node name.
+            **attributes: Edge attributes, e.g. weight=10, temetric=7, admin_group='0x1',
+                srlg=[100], max_rsrv_link_bw=1.25e7.
+
+        Returns:
+            The new edge, with the `id` it was given.
+        """
+        body = {'src': src, 'dst': dst, **attributes}
+        return self._client.post(f'/diagram/{self.graph_time}/edges', json=body).json()
+
+    def update_edge(
+        self,
+        edge_id: int,
+        isis_level: Optional[int] = None,
+        **attributes: Any,
+    ) -> Dict[str, Any]:
+        """Change some attributes of an edge and leave the others as they are.
+
+        Metric and TE values of an IS-IS edge are written into every level the edge is
+        in, or only into `isis_level`. None clears a TE value, and so does '' for
+        admin_group and [] for srlg.
+
+        Args:
+            edge_id: The `id` an `edges_list` item carries.
+            isis_level: 1 or 2 to write one level only. The server refuses with a 400 an
+                edge that is not in that level or has no per-level IS-IS data.
+            **attributes: Attributes to change, e.g. srlg=[100], temetric=7.
+
+        Returns:
+            The edge as stored after the change.
+
+        Raises:
+            ValidationError: On a value of the wrong type (e.g. srlg=5) or an unknown level.
+        """
+        params = {'isis_level': isis_level} if isis_level is not None else {}
+        self._client.patch(
+            f'/diagram/{self.graph_time}/edges/{edge_id}', params=params, json=attributes)
+        # The API answers with a message, not the edge -- refetch it.
+        return self.edge(edge_id)
+
+    def replace_edge(self, edge_id: int, **attributes: Any) -> Dict[str, Any]:
+        """Rewrite an edge: every attribute not given is dropped, TE values and IS-IS level data included.
+
+        Use `update_edge` to change a few attributes. After this, an explicit-level CSPF on
+        the graph is refused (422) because the edge no longer has per-level data.
+        """
+        self._client.put(f'/diagram/{self.graph_time}/edges/{edge_id}', json=attributes)
+        return self.edge(edge_id)
+
+    def delete_edge(self, edge_id: int) -> None:
+        """Delete an edge. Later edges are renumbered, so read ids again from `edges_list`."""
+        self._client.delete(f'/diagram/{self.graph_time}/edges/{edge_id}')
 
     def lsps_list(
         self,
