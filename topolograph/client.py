@@ -95,6 +95,13 @@ class Topolograph:
             self._uploader = Uploader(self)
         return self._uploader
     
+    @staticmethod
+    def _error_message(error_data: Any) -> Optional[str]:
+        """The server words an error as `error` (its handlers) or `detail` (request validation)."""
+        if not isinstance(error_data, dict):
+            return None
+        return error_data.get('error') or error_data.get('detail')
+
     def _request(
         self,
         method: str,
@@ -143,9 +150,7 @@ class Topolograph:
             elif response.status_code in (400, 405):
                 error_msg = "Invalid request"
                 try:
-                    error_data = response.json()
-                    if 'error' in error_data:
-                        error_msg = error_data['error']
+                    error_msg = self._error_message(response.json()) or error_msg
                 except:
                     error_msg = response.text or error_msg
                 raise ValidationError(
@@ -156,9 +161,7 @@ class Topolograph:
             elif not response.ok:
                 error_msg = f"API request failed with status {response.status_code}"
                 try:
-                    error_data = response.json()
-                    if 'error' in error_data:
-                        error_msg = error_data['error']
+                    error_msg = self._error_message(response.json()) or error_msg
                 except:
                     error_msg = response.text or error_msg
                 raise APIError(
