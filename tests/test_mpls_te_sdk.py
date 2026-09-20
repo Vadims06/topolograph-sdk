@@ -3,6 +3,8 @@ SDK sync for the MPLS TE plan (docs/todo/2026-07-16-mpls-lsp-tunnels-plan.md,
 flask-visual repo): cspf_path, edges_list(include=), lsps_list filters,
 paths.shortest(with_lsps=), paths.edge_failure_reaction.
 """
+import pytest
+
 from topolograph.resources.graph import Graph
 
 
@@ -70,6 +72,27 @@ def test_edges_list_include_param():
     assert method == 'get'
     assert path == '/graph/graph-time/edges'
     assert kwargs['params']['include'] == 'lsp_left_bw,edge_key'
+
+
+@pytest.mark.parametrize('is_te_link, expected', [(True, 'true'), (False, 'false')])
+def test_edges_list_is_te_link_filter_is_sent_as_a_lowercase_boolean(is_te_link, expected):
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.edges_list(is_te_link=is_te_link)
+
+    ((_method, _path, kwargs),) = client.calls
+    assert kwargs['params']['is_te_link'] == expected
+
+
+def test_edges_list_without_is_te_link_sends_no_filter():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.edges_list()
+
+    ((_method, _path, kwargs),) = client.calls
+    assert 'is_te_link' not in kwargs['params']
 
 
 def test_cspf_path_builds_query_params():

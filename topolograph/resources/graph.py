@@ -209,6 +209,7 @@ class Graph:
         include: Optional[List[str]] = None,
         page: int = 1,
         per_page: int = 50,
+        is_te_link: Optional[bool] = None,
         **edge_query_params: Union[str, int, float]
     ) -> Dict[str, Any]:
         """Get paginated list of edges with optional filters and TE link attribute querying.
@@ -229,11 +230,15 @@ class Graph:
                 bandwidth is left per edge after accounting for placed LSP tunnels —
                 lsp_left_bw_0..7 plus a human-readable lsp_reserved_bw/lsp_left_bw/
                 lsp_bandwidth_usage pair at the default priority-7 pool), 'lsps' (which
-                LSP tunnels traverse this edge), 'is_te_link' (whether the edge is
-                TE-enabled), 'edge_key' (stable identity, needed for lsps_list(via_edge_key=)
+                LSP tunnels traverse this edge), 'is_te_link' (true when the link
+                advertises at least one optional TE value: TE metric, admin group,
+                max/reservable/unreserved bandwidth or SRLG; a zero counts, interface
+                and neighbor addresses do not), 'edge_key' (stable identity, needed for lsps_list(via_edge_key=)
                 on parallel/ECMP edges).
             page: Page number (default: 1).
             per_page: Items per page (default: 50).
+            is_te_link: True keeps only TE links, False only links that are not.
+                Any other type is rejected by the server with HTTP 400.
             **edge_query_params: Per-edge attribute filters. Exact match or range suffix
                 (e.g. weight=10, temetric__gt=100, unreserved_bw_0__lt=1e9).
 
