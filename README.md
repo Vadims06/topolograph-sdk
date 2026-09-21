@@ -323,6 +323,24 @@ topo upload --file lsdb.txt --vendor Cisco --protocol ospf --watcher prod-watche
 - **Nokia**: `show router isis database detail`
 - **Huawei**: `display isis lsdb verbose`
 
+## Traffic Engineering attributes
+
+Edges carry the TE attributes advertised by the routers: `temetric`, `admin_group`,
+`max_link_bw`, `max_rsrv_link_bw`, `unreserved_bw_0` … `unreserved_bw_7`, `srlg`, and
+`is_te_link` (true when at least one TE value is present). Filter them with range
+operators and run a constrained path with `cspf_path`, optionally for one IS-IS level:
+
+```python
+edges = graph.edges_list(temetric__gte=100)
+te_links = graph.edges_list(is_te_link=True)
+path = graph.cspf_path("10.10.10.1", "10.10.10.7", bandwidth="5G", level=2)
+```
+
+Which vendor's output provides which attribute, with the RFC section of each, is in
+[TE attributes by vendor](https://docs.topolograph.com/reference/supported-vendors/#te-attributes-by-vendor).
+A step-by-step example with SDK calls on a 13-router IS-IS lab is in the
+[IS-IS runbook](https://topolograph.com/how-to/isis).
+
 ## Authentication
 
 The SDK supports multiple authentication methods (in priority order):
