@@ -1,7 +1,13 @@
 """Event resource for Topolograph API."""
 
+import warnings
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+
+from .query import QueryManager
+
+_ROUTE_EVENT_FILTERS = frozenset({
+    'start_time', 'end_time', 'last_minutes', 'vni', 'vrf', 'rt', 'rd', 'prefix', 'mac'})
 
 
 class Event:
@@ -51,6 +57,9 @@ class EventsManager:
         """
         self._client = client
         self.graph_time = graph_time
+        # route history of the bound BGP epoch; rows carry moved_from_vtep on a MAC move
+        self.routes = QueryManager(
+            client, lambda filters: f'/events/{graph_time}/routes', _ROUTE_EVENT_FILTERS)
     
     def get_network_events(
         self,
@@ -58,8 +67,22 @@ class EventsManager:
         end_time: Optional[str] = None,
         last_minutes: Optional[int] = None
     ) -> Dict[str, List[Event]]:
+        """Deprecated: use networks() instead."""
+        warnings.warn(
+            "EventsManager.get_network_events() is deprecated, use .networks() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.networks(start_time=start_time, end_time=end_time, last_minutes=last_minutes)
+
+    def networks(
+        self,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        last_minutes: Optional[int] = None
+    ) -> Dict[str, List[Event]]:
         """Get network events (network up/down and network cost changes).
-        
+
         Args:
             start_time: Start time in ISO format (e.g., "2025-06-30T20:00:00Z")
             end_time: End time in ISO format
@@ -108,8 +131,22 @@ class EventsManager:
         end_time: Optional[str] = None,
         last_minutes: Optional[int] = None
     ) -> Dict[str, List[Event]]:
+        """Deprecated: use adjacency() instead."""
+        warnings.warn(
+            "EventsManager.get_adjacency_events() is deprecated, use .adjacency() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.adjacency(start_time=start_time, end_time=end_time, last_minutes=last_minutes)
+
+    def adjacency(
+        self,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        last_minutes: Optional[int] = None
+    ) -> Dict[str, List[Event]]:
         """Get adjacency events (host up/down and link cost changes).
-        
+
         Args:
             start_time: Start time in ISO format (e.g., "2025-06-30T20:00:00Z")
             end_time: End time in ISO format
@@ -174,11 +211,29 @@ class EventsManager:
         page: int = 1,
         per_page: int = 20
     ) -> Dict[str, Any]:
+        """Deprecated: use timeline() instead."""
+        warnings.warn(
+            "EventsManager.get_events_timeline() is deprecated, use .timeline() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.timeline(
+            start_time=start_time, end_time=end_time, last_minutes=last_minutes,
+            page=page, per_page=per_page)
+
+    def timeline(
+        self,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        last_minutes: Optional[int] = None,
+        page: int = 1,
+        per_page: int = 20
+    ) -> Dict[str, Any]:
         """Get adjacency events grouped into chronological time waves.
 
         Each wave is a burst of events separated from the next by a calm gap,
         with a per-wave summary (no nested event arrays). To fetch a wave's
-        individual events, re-query get_adjacency_events with the wave's
+        individual events, re-query adjacency() with the wave's
         start_ts/end_ts. Field reference and pattern (outage/flap/up) meanings:
         https://docs.topolograph.com/monitoring/events-timeline/
 

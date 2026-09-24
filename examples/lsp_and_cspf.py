@@ -20,7 +20,7 @@ LSP_NAME = 'SDK-EXAMPLE'
 client = Topolograph('https://topolograph.com', token=os.environ['TOPOLOGRAPH_API_TOKEN'])
 graph = client.graphs.get(latest=True)
 print(f'\n  Topolograph SDK — MPLS-TE demo')
-print(f'  graph: {graph.graph_time}  ({graph.protocol.upper()})\n')
+print(f'  graph: {graph.graph_time}  ({", ".join(graph.protocols).upper()})\n')
 
 src = os.environ.get('TOPOLOGRAPH_SRC_NODE', '123.123.31.31')
 dst = os.environ.get('TOPOLOGRAPH_DST_NODE', '123.14.14.14')

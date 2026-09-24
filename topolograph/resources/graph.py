@@ -1,10 +1,15 @@
 """Graph resource for Topolograph API."""
 
+import warnings
 from typing import Optional, List, Dict, Any, Union
 from .node import NodesManager
 from .network import NetworksManager
 from .path import PathsManager
 from .event import EventsManager
+from .query import QueryManager
+
+_VPN_FILTERS = frozenset({'router_id'})
+_ROUTE_FILTERS = frozenset({'router_id', 'vni', 'vrf', 'rt', 'rd', 'vtep', 'prefix', 'mac', 'at'})
 
 
 class Graph:
@@ -20,7 +25,8 @@ class Graph:
         self._client = client
         self.graph_time = data.get('graph_time')
         self.timestamp = data.get('timestamp')
-        self.protocol = data.get('protocol')
+        # older servers send the single IGP as `protocol`
+        self.protocols = data.get('protocols') or ([data['protocol']] if data.get('protocol') else [])
         self.watcher_name = data.get('watcher_name')
         self.is_from_watcher = data.get('is_from_watcher', False)
         self.is_monitored = data.get('is_monitored', self.is_from_watcher)
@@ -35,6 +41,16 @@ class Graph:
         self._paths_manager = None
         self._events_manager = None
     
+    @property
+    def protocol(self) -> Optional[str]:
+        """Deprecated: use protocols, whose first item is the IGP."""
+        warnings.warn(
+            "Graph.protocol is deprecated, use Graph.protocols instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.protocols[0] if self.protocols else None
+
     @property
     def nodes(self) -> NodesManager:
         """Get nodes manager for this graph."""
@@ -114,40 +130,15 @@ class Graph:
         attached: Optional[bool] = None,
         maxmetric: Optional[bool] = None,
     ) -> Dict[str, Any]:
-        """Get paginated list of nodes/routers.
-
-        Args:
-            page: Page number (default: 1)
-            per_page: Items per page (default: 50)
-            protocol: Filter — only return if graph matches protocol (ospf, ospfv3, isis, yaml)
-            watcher: Filter — True for watcher-uploaded graphs, False for manually parsed
-            area: Filter — only return if graph contains this area (e.g. "0", "0.0.0.1", "49.0001")
-            abr: OSPF role filter — True for Area Border Routers only (False for non-ABRs)
-            asbr: OSPF role filter — True for AS Boundary Routers only (False for non-ASBRs)
-            overload: IS-IS filter — True for routers with the overload (OL) bit set
-            attached: IS-IS filter — True for routers with the attached (ATT) bit set
-            maxmetric: OSPF filter — True for routers in max-metric (RFC 3137 stub router) state
-
-        Returns:
-            Dictionary with:
-            - items: List of node dictionaries with node_id (canonical graph name),
-                     display_name (human-readable text), hostname, systemid (IS-IS),
-                     pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
-                     (role flags: abr/asbr/maxmetric for OSPF, overload/attached for IS-IS)
-            - pagination: Dictionary with page, per_page, total, total_pages
-        """
-        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
-        if protocol:
-            params['protocol'] = protocol
-        if watcher is not None:
-            params['watcher'] = str(watcher).lower()
-        if area:
-            params['area'] = area
-        for flag_name, flag_value in (('abr', abr), ('asbr', asbr), ('overload', overload), ('attached', attached), ('maxmetric', maxmetric)):
-            if flag_value is not None:
-                params[flag_name] = int(flag_value)
-        response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
-        return response.json()
+        """Deprecated: use nodes.filter() instead."""
+        warnings.warn(
+            "Graph.nodes_list() is deprecated, use Graph.nodes.filter() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        filters = dict(protocol=protocol, watcher=watcher, area=area, abr=abr, asbr=asbr,
+                       overload=overload, attached=attached, maxmetric=maxmetric)
+        return self.nodes._page(filters, page, per_page)
     
     def areas_list(self) -> Dict[str, Any]:
         """Get list of areas (no pagination needed, typically < 20 areas).
@@ -187,17 +178,33 @@ class Graph:
         response = self._client.get(f'/graph/{self.graph_time}/vrfs', params=params)
         return response.json()
 
-    def vpn_routers(self) -> Dict[str, Any]:
-        """Routers the BGP epochs bound to this graph know, each with the
-        vantage its table is observed at.
+    @property
+    def vpns(self) -> QueryManager:
+        """VPN/VRF/VNI inventory of the bound BGP epoch: all(), filter(router_id=), count().
 
-        Returns:
-            Dictionary with 'items': list of dicts with router_id, vpn_count,
-            evidence (loc_rib | adj_rib_in | loc_rib_reflected | adj_rib_out),
-            can_build_path, assumptions. Use these as `start_node` for
-            paths.resolve_route on a VPN destination.
+        Rows: name, route_targets, route_distinguishers, vni, l3vni,
+        prefix_count. router_id scopes to that router's resolved RIB view.
         """
-        return self._client.get(f'/graph/{self.graph_time}/vpn-routers').json()
+        return QueryManager(self._client, self._bgp_path('vpns'), _VPN_FILTERS)
+
+    @property
+    def routes(self) -> QueryManager:
+        """Routes of the bound BGP epoch: VRF/VNI contents, where a MAC/IP is.
+
+        filter() accepts router_id (that router's resolved RIB view), vni,
+        vrf, rt, rd, vtep, mac, at (point in time instead of current state)
+        and prefix: a CIDR is an exact match, an address returns every
+        covering route, longest prefix first.
+        """
+        return QueryManager(self._client, self._bgp_path('routes'), _ROUTE_FILTERS)
+
+    def _bgp_path(self, collection: str):
+        def path(filters: Dict[str, Any]) -> str:
+            router_id = filters.pop('router_id', None)
+            if router_id:
+                return f'/graph/{self.graph_time}/node/{router_id}/{collection}'
+            return f'/graph/{self.graph_time}/{collection}'
+        return path
 
     def edges_list(
         self,
@@ -465,7 +472,7 @@ class Graph:
         self._client.delete(f'/graph/{self.graph_time}')
     
     def __repr__(self) -> str:
-        return f"Graph(graph_time={self.graph_time}, protocol={self.protocol})"
+        return f"Graph(graph_time={self.graph_time}, protocols={self.protocols})"
 
 
 class GraphsManager:
@@ -658,7 +665,7 @@ class GraphsManager:
         graph_data = {
             'graph_time': diagram_data['graph_time'],
             'timestamp': diagram_data.get('timestamp'),
-            'protocol': 'yaml',
+            'protocols': ['yaml'],
             'is_from_watcher': False
         }
         return Graph(self._client, graph_data)

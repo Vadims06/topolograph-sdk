@@ -1,8 +1,11 @@
 """Node resource for Topolograph API."""
 
-from typing import Optional, List, Dict, Any
+import warnings
+from itertools import islice
+from typing import Any, Dict, Optional
 
 from ..exceptions import NotFoundError
+from .query import QueryManager
 
 
 class Node:
@@ -58,63 +61,53 @@ class Node:
         return f"Node(id={self.id}, name={self.name})"
 
 
-class NodesManager:
-    """Manager for node resources."""
-    
+class NodesManager(QueryManager):
+    """Nodes of the graph: all(), filter(**kw), count(**kw), get(name=).
+
+    Filters: protocol (graph-level: ospf, ospfv3, isis, yaml; bgp returns BGP
+    routers narrowed by vni=, vrf= or rt=), watcher, area, and vertex
+    attributes such as name='10.0.0.1', location='dc1', abr=True (OSPF),
+    overload=True (IS-IS). Rows: node_id, display_name, hostname, systemid,
+    networks_count, areas, node_attributes; BGP routers carry can_build_path.
+    """
+
     def __init__(self, client, graph_time: str):
         """Initialize the NodesManager.
-        
+
         Args:
             client: Topolograph client instance
             graph_time: Graph time identifier
         """
-        self._client = client
+        super().__init__(client, lambda filters: f'/graph/{graph_time}/nodes')
         self.graph_time = graph_time
-    
-    def get(
-        self,
-        name: Optional[str] = None,
-        protocol: Optional[str] = None,
-        watcher: Optional[bool] = None,
-        area: Optional[str] = None,
-        page: int = 1,
-        per_page: int = 50,
-        **query_params
-    ) -> Dict[str, Any]:
-        """Get paginated nodes from the graph.
 
-        Args:
-            name: Optional node name to filter by (exact match on igraph vertex name)
-            protocol: Graph-level filter (ospf, ospfv3, isis, yaml)
-            watcher: Graph-level filter — True for watcher-uploaded, False for manually parsed
-            area: Graph-level filter by area (e.g. "0", "0.0.0.1", "49.0001")
-            page: Page number (default: 1)
-            per_page: Items per page (default: 50)
-            **query_params: Additional flat vertex attribute filters, e.g. location='dc1',
-                or node role flags abr=1 / asbr=1 (OSPF), overload=1 / attached=1 (IS-IS)
+    def _encode(self, filters: Dict[str, Any]) -> Dict[str, Any]:
+        # watcher is a swagger boolean; role flags are vertex attributes stored as 0/1
+        return {
+            name: (str(value).lower() if name == 'watcher' else int(value))
+            if isinstance(value, bool) else value
+            for name, value in filters.items()
+        }
 
-        Returns:
-            Dictionary with:
-            - items: List of node dictionaries with node_id (canonical graph name),
-                     display_name (human-readable text), hostname, systemid (IS-IS),
-                     pseudo_rid (IS-IS), networks_count, areas, is_isis, and node_attributes
-                     (role flags: abr/asbr for OSPF, overload/attached for IS-IS)
-            - pagination: Dictionary with page, per_page, total, total_pages
+    def get(self, name: Optional[str] = None, page: Optional[int] = None,
+            per_page: Optional[int] = None, **filters) -> Any:
+        """One node by name, or None.
+
+        Called with anything but `name`, it returns the old page dictionary
+        for one more version; use filter() for that.
         """
-        params: Dict[str, Any] = {'page': page, 'per_page': per_page}
-        if name:
-            params['name'] = name
-        if protocol:
-            params['protocol'] = protocol
-        if watcher is not None:
-            params['watcher'] = str(watcher).lower()
-        if area:
-            params['area'] = area
-        params.update(query_params)
+        if name is not None and page is None and per_page is None and not filters:
+            nodes = list(islice(self.filter(name=name), 2))
+            if len(nodes) > 1:
+                raise ValueError(f"more than one node is named {name}; use filter()")
+            return nodes[0] if nodes else None
+        warnings.warn(
+            "NodesManager.get() with filters or paging is deprecated, use .filter() or .count() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._page({'name': name, **filters}, page or 1, per_page or 50)
 
-        response = self._client.get(f'/graph/{self.graph_time}/nodes', params=params)
-        return response.json()
-    
     def get_by_id(self, node_id: str) -> Optional[Node]:
         """Get a specific node by ID.
 

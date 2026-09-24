@@ -70,7 +70,7 @@ def graphs(
             networks_count = graph.networks_data.get('count', 0) if isinstance(graph.networks_data, dict) else 0
             table.add_row(
                 graph.graph_time or "N/A",
-                graph.protocol or "N/A",
+                ", ".join(graph.protocols) or "N/A",
                 graph.watcher_name or "N/A",
                 str(hosts_count),
                 str(networks_count),
@@ -92,7 +92,7 @@ def graphs(
             return
         
         console.print(f"[green]Graph Time:[/green] {graph.graph_time}")
-        console.print(f"[green]Protocol:[/green] {graph.protocol}")
+        console.print(f"[green]Protocol:[/green] {', '.join(graph.protocols)}")
         console.print(f"[green]Watcher:[/green] {graph.watcher_name or 'N/A'}")
         if isinstance(graph.hosts, dict):
             console.print(f"[green]Hosts:[/green] {graph.hosts.get('count', 0)}")
@@ -163,7 +163,7 @@ def ingest(
             
             console.print(f"[green]Upload successful![/green]")
             console.print(f"  [green]Graph Time:[/green] {graph.graph_time}")
-            console.print(f"  [green]Protocol:[/green] {graph.protocol}")
+            console.print(f"  [green]Protocol:[/green] {', '.join(graph.protocols)}")
     
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
@@ -244,7 +244,7 @@ def upload(
         
         console.print(f"[green]Upload successful![/green]")
         console.print(f"  [green]Graph Time:[/green] {graph.graph_time}")
-        console.print(f"  [green]Protocol:[/green] {graph.protocol}")
+        console.print(f"  [green]Protocol:[/green] {', '.join(graph.protocols)}")
         if isinstance(graph.hosts, dict):
             console.print(f"  [green]Hosts:[/green] {graph.hosts.get('count', 0)}")
         if isinstance(graph.networks_data, dict):
