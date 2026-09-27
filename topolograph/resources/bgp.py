@@ -11,8 +11,7 @@ from typing import Any, Dict, List, Optional
 
 # Route search filters accepted by both the graph- and node-scoped endpoints.
 # Passed straight through as query parameters; unknown keys are rejected so a
-# typo fails loudly instead of being silently dropped by the API. `lpm` is a
-# named kwarg on search() instead -- the API only honours "true"/"1"/"yes".
+# typo fails loudly instead of being silently dropped by the API.
 _ROUTE_FILTERS = frozenset({
     "prefix", "vrf", "rd", "rt", "afi", "safi", "bmp_rib", "evidence",
     "as_path_contains", "origin", "local_pref", "med", "community",
@@ -88,7 +87,6 @@ class BgpRoutesManager:
     def search(
         self,
         router_id: Optional[str] = None,
-        lpm: bool = False,
         sort: Optional[str] = None,
         order: Optional[str] = None,
         page: int = 1,
@@ -100,23 +98,23 @@ class BgpRoutesManager:
         Args:
             router_id: scope to one router's resolved RIB view (hits the
                 node-scoped endpoint); omit for the whole graph table.
-            lpm: with a CIDR `prefix` filter, return only the single longest
-                covering match instead of the table (cannot be paged).
             sort: route column to order by (only indexed columns accepted);
                 `sortable_columns` in the response lists them.
             order: 'asc' or 'desc'.
-            **filters: any of prefix, vrf, rd, rt, afi, safi, bmp_rib,
+            **filters: any of prefix (a CIDR is an exact match, an address
+                returns every covering route, longest first), vrf, rd, rt, afi, safi, bmp_rib,
                 evidence, as_path_contains, origin, local_pref, med, community,
                 large_community, extended_community, label, originator_id,
                 peer_ip, nexthop, bmp_source, table_filters, ribs.
         """
+        if "lpm" in filters:
+            raise ValueError("lpm was removed: pass an address as prefix= to get every covering "
+                             "route, longest first")
         unknown = set(filters) - _ROUTE_FILTERS
         if unknown:
             raise ValueError(f"unknown route filter(s): {', '.join(sorted(unknown))}")
         params: Dict[str, Any] = {"page": page, "per_page": per_page}
         params.update({key: value for key, value in filters.items() if value is not None})
-        if lpm:
-            params["lpm"] = "true"
         if sort:
             params["sort"] = sort
         if order:

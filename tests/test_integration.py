@@ -68,7 +68,7 @@ class TestSDKIntegration:
         
         assert graph is not None
         assert graph.graph_time is not None
-        assert graph.protocol == first_host.protocol
+        assert first_host.protocol in graph.protocols
     
     def test_retrieve_graph(self, client):
         """Test retrieving latest graph."""
@@ -78,7 +78,7 @@ class TestSDKIntegration:
         # If graph exists, verify structure
         if graph:
             assert graph.graph_time is not None
-            assert hasattr(graph, 'protocol')
+            assert hasattr(graph, 'protocols')
             assert hasattr(graph, 'hosts')
     
     def test_graph_status(self, client):
@@ -102,14 +102,14 @@ class TestSDKIntegration:
             pytest.skip("No graph available")
         
         # Get nodes from graph
-        nodes = graph.nodes.get()
+        nodes = list(graph.nodes.all())
         
         if len(nodes) < 2:
             pytest.skip("Not enough nodes for path computation")
         
         # Compute path between first two nodes
-        src = nodes[0].name or nodes[0].id
-        dst = nodes[1].name or nodes[1].id
+        src = nodes[0]['node_id']
+        dst = nodes[1]['node_id']
         
         path = graph.paths.shortest(str(src), str(dst))
         
@@ -125,14 +125,14 @@ class TestSDKIntegration:
             pytest.skip("No graph available")
         
         # Get network events
-        network_events = graph.events.get_network_events(last_minutes=60)
+        network_events = graph.events.networks(last_minutes=60)
         
         assert network_events is not None
         assert 'network_up_down_events' in network_events
         assert 'network_cost_change_events' in network_events
         
         # Get adjacency events
-        adjacency_events = graph.events.get_adjacency_events(last_minutes=60)
+        adjacency_events = graph.events.adjacency(last_minutes=60)
         
         assert adjacency_events is not None
         assert 'all_host_up_down_events' in adjacency_events

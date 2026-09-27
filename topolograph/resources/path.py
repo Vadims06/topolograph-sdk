@@ -59,6 +59,23 @@ class PathsManager:
             f'/graph/{self.graph_time}/path/{src_node}/{dst_node}', params=params)
         return Path(response.json())
 
+    def shortest_to_many(self, src_node: str, dst_nodes: List[str]) -> Dict[str, Any]:
+        """One SPF from src_node to several targets, edges unioned for MST-style colouring.
+
+        Args:
+            src_node: Source node identifier.
+            dst_nodes: Target node identifiers (more than one -- a single
+                target should use `shortest` instead).
+
+        Returns:
+            Dictionary keyed 'targets' (per-target cost/path/error),
+            'node_dd_in_ll' and 'to_unflat_ecmp_edges_id_ll' (union of edges
+            for canvas colouring).
+        """
+        response = self._client.get(
+            f'/graph/{self.graph_time}/path/{src_node}/{",".join(dst_nodes)}')
+        return response.json()
+
     def shortest_network(self, src_ip_or_network: str, dst_ip_or_network: str) -> Path:
         """Compute the shortest path between two IP addresses or networks.
 

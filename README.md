@@ -35,7 +35,7 @@ graph = topo.graphs.get(latest=True)
 
 # Access graph properties
 print(f"Graph Time: {graph.graph_time}")
-print(f"Protocol: {graph.protocol}")
+print(f"Protocols: {graph.protocols}")
 print(f"Hosts: {graph.hosts['count']}")
 
 # Get graph status
@@ -112,10 +112,11 @@ graphs = topo.graphs.list(protocol="ospf")
 # Get specific graph
 graph = topo.graphs.get_by_time("2024-01-15T10:30:00Z")
 
-# Get nodes
-nodes = graph.nodes.get()
-for node in nodes:
-    print(f"Node: {node.name} (ID: {node.id})")
+# Nodes: all(), filter(**kw), get(name=...), count(**kw); pages are fetched while iterating
+for node in graph.nodes.all():
+    print(node["node_id"], node["display_name"])
+abrs = list(graph.nodes.filter(abr=True))
+node = graph.nodes.get(name="10.0.0.1")   # one node or None
 
 # Find networks
 networks = graph.networks.find_by_ip("10.10.10.1")
@@ -207,12 +208,12 @@ path = graph.paths.shortest(
 
 ```python
 # Get network events
-network_events = graph.events.get_network_events(last_minutes=60)
+network_events = graph.events.networks(last_minutes=60)
 for event in network_events['network_up_down_events']:
     print(f"Network {event.event_object} is {event.event_status}")
 
 # Get adjacency events
-adjacency_events = graph.events.get_adjacency_events(
+adjacency_events = graph.events.adjacency(
     start_time="2024-01-15T10:00:00Z",
     end_time="2024-01-15T11:00:00Z"
 )
@@ -249,6 +250,32 @@ graph.vrfs(router_id="1.1.1.1")
 
 # Protocol-aware path resolution (static/BGP/IGP/LSP hand-off)
 graph.paths.resolve_route("R1", "8.8.8.8", vrf="BLUE")
+```
+
+### BGP/EVPN over the IGP graph
+
+Every VPN/EVPN question is answered from the IGP graph the BGP epoch is bound
+to -- no separate `bgp_graph_time` needed.
+
+```python
+# VNI/VRF inventory, fabric-wide or as one router sees it
+graph.vpns.all()
+graph.vpns.filter(router_id="leaf1")
+
+# Leaves that carry a VNI or VRF
+graph.nodes.filter(protocol="bgp", vni=1010)
+
+# Routes: VRF/VNI contents, or where a MAC/IP currently is
+graph.routes.filter(mac="aa:bb:cc:00:00:01")
+graph.routes.filter(router_id="leaf1", vrf="tenant1")
+graph.routes.count(vni=1010)
+
+# History: did a MAC move, from which VTEP to which
+for event in graph.events.routes.filter(mac="aa:bb:cc:00:00:01", last_minutes=60):
+    print(event.get("moved_from_vtep"))
+
+# Path to several VTEPs at once (underlay colouring)
+graph.paths.shortest_to_many("leaf1", ["leaf2", "leaf3"])
 ```
 
 ## CLI Usage

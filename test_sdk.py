@@ -88,7 +88,7 @@ def test_upload(result, api_url=None, api_token=None):
         
         print(f"✓ Upload successful!")
         print(f"  Graph Time: {graph.graph_time}")
-        print(f"  Protocol: {graph.protocol}")
+        print(f"  Protocols: {graph.protocols}")
         if isinstance(graph.hosts, dict):
             print(f"  Hosts: {graph.hosts.get('count', 0)}")
         if isinstance(graph.networks_data, dict):
@@ -119,7 +119,7 @@ def test_graph_operations(client):
             return False
         
         print(f"✓ Graph retrieved: {graph.graph_time}")
-        print(f"  Protocol: {graph.protocol}")
+        print(f"  Protocols: {graph.protocols}")
         
         # Get status
         print("\nGetting graph status...")
@@ -132,7 +132,7 @@ def test_graph_operations(client):
         
         # Get nodes
         print("\nGetting nodes...")
-        nodes = graph.nodes.get()
+        nodes = list(graph.nodes.all())
         print(f"✓ Found {len(nodes)} nodes")
         if nodes:
             print(f"  First node: {nodes[0]}")
@@ -156,8 +156,8 @@ def test_graph_operations(client):
         
         # Get events
         print("\nGetting events...")
-        network_events = graph.events.get_network_events(last_minutes=60)
-        adjacency_events = graph.events.get_adjacency_events(last_minutes=60)
+        network_events = graph.events.networks(last_minutes=60)
+        adjacency_events = graph.events.adjacency(last_minutes=60)
         print(f"✓ Network events: {len(network_events['network_up_down_events'])} up/down, "
               f"{len(network_events['network_cost_change_events'])} cost changes")
         print(f"✓ Adjacency events: {len(adjacency_events['all_host_up_down_events'])} total")
