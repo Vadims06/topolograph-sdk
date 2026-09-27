@@ -1,3 +1,42 @@
+# Release Notes - topolograph-sdk v0.2.0
+
+Requires Topolograph >= 2.73.
+
+## New
+
+- **BGP VPN and EVPN on the IGP graph.** Every question is asked on the OSPF/IS-IS
+  graph; the BGP epoch bound to it answers, with no `bgp_graph_time`.
+  - `graph.vpns`: VNIs and VRFs of the fabric; `graph.vpns.filter(router_id=...)` for one router.
+  - `graph.routes`: where a MAC or IP is, what a VRF or VNI holds. Filters: `mac`, `prefix`,
+    `vni`, `vrf`, `rt`, `rd`, `vtep`, `at`, `router_id`.
+  - `graph.events.routes`: route history; a MAC's arrival on a new VTEP carries `moved_from_vtep`.
+  - `graph.nodes.filter(protocol="bgp", vni=...)` (or `vrf=`, `rt=`): the leaves that carry it.
+  - `graph.paths.shortest_to_many(src, [dst1, dst2])`: paths to several targets from one SPF.
+- **Managers in pynetbox style.** `graph.nodes`, `graph.vpns` and `graph.routes` have
+  `all()`, `filter(**filters)` and `count(**filters)`; pages are fetched while iterating.
+  `graph.nodes.get(name=...)` returns one node or `None`.
+- `graph.protocols`: the graph's IGP, plus `bgp` when a BGP epoch is bound to it.
+- `graph.events.networks()`, `.adjacency()`, `.timeline()`.
+
+## Deprecated (still work, emit `DeprecationWarning`)
+
+| Old | New |
+|---|---|
+| `graph.protocol` | `graph.protocols` |
+| `graph.nodes_list()` | `graph.nodes.filter()` |
+| `graph.nodes.get()` with filters or paging | `graph.nodes.filter()` / `.count()` |
+| `graph.events.get_network_events()` | `graph.events.networks()` |
+| `graph.events.get_adjacency_events()` | `graph.events.adjacency()` |
+| `graph.events.get_events_timeline()` | `graph.events.timeline()` |
+
+## Removed
+
+- `graph.vpn_routers()`: use `graph.nodes.filter(protocol="bgp")`.
+- `lpm` in BGP route search: pass an address as `prefix=`; covering routes come back
+  longest prefix first. Passing `lpm` raises `ValueError`.
+
+---
+
 # Release Notes - topolograph-sdk v0.1.5
 
 ## ✨ New

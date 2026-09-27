@@ -57,7 +57,7 @@ class EventsManager:
         """
         self._client = client
         self.graph_time = graph_time
-        # route history of the bound BGP epoch; rows carry moved_from_vtep on a MAC move
+        # route history of the bound BGP epochs (the latest of every source); rows carry moved_from_vtep on a MAC move
         self.routes = QueryManager(
             client, lambda filters: f'/events/{graph_time}/routes', _ROUTE_EVENT_FILTERS)
     

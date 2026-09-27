@@ -180,7 +180,7 @@ class Graph:
 
     @property
     def vpns(self) -> QueryManager:
-        """VPN/VRF/VNI inventory of the bound BGP epoch: all(), filter(router_id=), count().
+        """VPN/VRF/VNI inventory of the bound BGP epochs: all(), filter(router_id=), count().
 
         Rows: name, route_targets, route_distinguishers, vni, l3vni,
         prefix_count. router_id scopes to that router's resolved RIB view.
@@ -189,7 +189,7 @@ class Graph:
 
     @property
     def routes(self) -> QueryManager:
-        """Routes of the bound BGP epoch: VRF/VNI contents, where a MAC/IP is.
+        """Routes of the bound BGP epochs: VRF/VNI contents, where a MAC/IP is.
 
         filter() accepts router_id (that router's resolved RIB view), vni,
         vrf, rt, rd, vtep, mac, at (point in time instead of current state)
