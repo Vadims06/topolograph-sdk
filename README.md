@@ -2,6 +2,8 @@
 
 A Pythonic, object-oriented client for the Topolograph REST API with built-in topology ingestion via SSH.
 
+The SDK works with both Topolograph editions through the REST API: Community (free, self-hosted or topolograph.com) and Enterprise ([comparison](https://topolograph.com/#editions)). Calls that read watcher events or event history, `graph.events.*` and `bgp.events.timeline`, return data only on Enterprise, where watchers feed Topolograph.
+
 ## Features
 
 - **Pythonic API Client**: Clean, object-oriented interface to the Topolograph REST API
