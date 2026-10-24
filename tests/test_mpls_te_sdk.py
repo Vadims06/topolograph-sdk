@@ -170,15 +170,14 @@ def test_paths_shortest_network():
     ]
 
 
-def test_paths_edge_failure_reaction():
+@pytest.mark.parametrize('method, failed, path, body', [
+    ('edge_failure_reaction', [('R1', 'R2')], '/network_reaction/edge_failure/', {'failed_edges_list': [['R1', 'R2']]}),
+    ('node_failure_reaction', ['R2', 'R4'], '/network_reaction/node_failure/', {'failed_nodes_list': ['R2', 'R4']}),
+])
+def test_paths_failure_reaction(method, failed, path, body):
     client = _Client()
     graph = Graph(client, {'graph_time': 'graph-time'})
 
-    graph.paths.edge_failure_reaction([('R1', 'R2')])
+    getattr(graph.paths, method)(failed)
 
-    assert client.calls == [
-        ('post', '/network_reaction/edge_failure/', {'json': {
-            'graph_time': 'graph-time',
-            'failed_edges_list': [['R1', 'R2']],
-        }}),
-    ]
+    assert client.calls == [('post', path, {'json': {'graph_time': 'graph-time', **body}})]
