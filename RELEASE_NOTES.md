@@ -7,7 +7,8 @@ Requires a Topolograph newer than 3.0.2: its diagram edges carry `edge_key`.
 - `graph.edge`, `update_edge`, `replace_edge` and `delete_edge` take the `edge_key` an
   edge carries (`graph.edges_list()` items, `graph.add_edge()` answer) instead of the
   integer `id`. A key keeps naming the same edge after another edge is deleted; the id
-  does not.
+  does not. A key is fixed when the edge is created; replacing the whole diagram text
+  names the edges anew.
 
 ## Deprecated
 
