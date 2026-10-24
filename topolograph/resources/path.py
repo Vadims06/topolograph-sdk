@@ -60,7 +60,7 @@ class PathsManager:
         return Path(response.json())
 
     def shortest_to_many(self, src_node: str, dst_nodes: List[str]) -> Dict[str, Any]:
-        """One SPF from src_node to several targets, edges unioned for MST-style colouring.
+        """One SPF from src_node to several targets, instead of one call per target.
 
         Args:
             src_node: Source node identifier.
@@ -68,9 +68,7 @@ class PathsManager:
                 target should use `shortest` instead).
 
         Returns:
-            Dictionary keyed 'targets' (per-target cost/path/error),
-            'node_dd_in_ll' and 'to_unflat_ecmp_edges_id_ll' (union of edges
-            for canvas colouring).
+            Dictionary keyed 'targets': per-target cost, path or error.
         """
         response = self._client.get(
             f'/graph/{self.graph_time}/path/{src_node}/{",".join(dst_nodes)}')
@@ -149,8 +147,9 @@ class PathsManager:
 
         Returns:
             Dictionary with 'isGraphStillConnected', 'affectedLinks'
-            (sptPathsIncreasedInPercent/sptPathsDecreasedInPercent), and
-            'disjointedNodes' (list of node-name groups, if the graph split)
+            (sptPathsIncreasedInPercent/sptPathsDecreasedInPercent, each a
+            list of {'from', 'to', 'value'} links), and 'disjointedNodes'
+            (list of node-name groups, if the graph split)
         """
         payload = {
             'graph_time': self.graph_time,
