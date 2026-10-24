@@ -63,9 +63,10 @@ def test_delete_edge_returns_nothing(graph, fake_client):
     (lambda graph: graph.delete_edge(7), [('delete', '/diagram/graph-time/edges/7', {})]),
 ], ids=['edge', 'edge_id_keyword', 'update', 'replace', 'delete'])
 def test_an_integer_id_still_uses_the_index_routes_and_warns(graph, fake_client, call, expected):
-    with pytest.warns(DeprecationWarning, match='edge_key'):
+    with pytest.warns(DeprecationWarning, match='edge_key') as warnings_seen:
         call(graph)
 
+    assert len(warnings_seen) == 1
     assert fake_client.calls == expected
 
 

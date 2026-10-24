@@ -294,7 +294,10 @@ class Graph:
         Raises:
             NotFoundError: If the graph has no edge with this key.
         """
-        target = self._warn_if_edge_id(edge_key, edge_id)
+        return self._get_edge(self._warn_if_edge_id(edge_key, edge_id))
+
+    def _get_edge(self, target: Union[str, int]) -> Dict[str, Any]:
+        """The read behind `edge`, so a deprecated call that refetches warns once."""
         if isinstance(target, str):
             return self._client.get(f'/diagram/{self.graph_time}/edges', params={'edge_key': target}).json()
         return self._client.get(f'/diagram/{self.graph_time}/edges/{target}').json()
@@ -345,10 +348,10 @@ class Graph:
         params = {'isis_level': isis_level} if isis_level is not None else {}
         if isinstance(target, str):
             self._client.patch(f'/diagram/{self.graph_time}/edges', params=params, json={**attributes, 'edge_key': target})
-            return self.edge(target)
+            return self._get_edge(target)
         self._client.patch(f'/diagram/{self.graph_time}/edges/{target}', params=params, json=attributes)
         # The API answers with a message, not the edge -- refetch it.
-        return self.edge(edge_id=target)
+        return self._get_edge(target)
 
     def replace_edge(
         self,
@@ -365,9 +368,9 @@ class Graph:
         target = self._warn_if_edge_id(edge_key, edge_id)
         if isinstance(target, str):
             self._client.put(f'/diagram/{self.graph_time}/edges', json={**attributes, 'edge_key': target})
-            return self.edge(target)
+            return self._get_edge(target)
         self._client.put(f'/diagram/{self.graph_time}/edges/{target}', json=attributes)
-        return self.edge(edge_id=target)
+        return self._get_edge(target)
 
     def delete_edge(self, edge_key: Union[str, int, None] = None, *, edge_id: Optional[int] = None) -> None:
         """Delete an edge. Other edges keep their `edge_key`."""
