@@ -273,16 +273,34 @@ class Graph:
         response = self._client.get(f'/graph/{self.graph_time}/edges', params=params)
         return response.json()
 
-    def edge(self, edge_id: int) -> Dict[str, Any]:
+    def _warn_if_edge_id(self, edge_key: Union[str, int, None], edge_id: Optional[int]) -> Union[str, int]:
+        """One place that turns the deprecated integer id into the warning and the index route."""
+        if edge_id is None and isinstance(edge_key, str):
+            return edge_key
+        if edge_id is None and edge_key is None:
+            raise TypeError('an edge is named by its edge_key')
+        warnings.warn(
+            'An edge id shifts after any deletion; pass the `edge_key` an edge carries.',
+            DeprecationWarning, stacklevel=3)
+        return edge_id if edge_id is not None else edge_key
+
+    def edge(self, edge_key: Union[str, int, None] = None, *, edge_id: Optional[int] = None) -> Dict[str, Any]:
         """Get one edge of the diagram with all its attributes.
 
         Args:
-            edge_id: The `id` an `edges_list` item carries.
+            edge_key: The `edge_key` an `edges_list` item carries. An integer is read as the
+                deprecated `id`, as is `edge_id`.
 
         Raises:
-            NotFoundError: If the graph has no edge with this id.
+            NotFoundError: If the graph has no edge with this key.
         """
-        return self._client.get(f'/diagram/{self.graph_time}/edges/{edge_id}').json()
+        return self._get_edge(self._warn_if_edge_id(edge_key, edge_id))
+
+    def _get_edge(self, target: Union[str, int]) -> Dict[str, Any]:
+        """The read behind `edge`, so a deprecated call that refetches warns once."""
+        if isinstance(target, str):
+            return self._client.get(f'/diagram/{self.graph_time}/edges', params={'edge_key': target}).json()
+        return self._client.get(f'/diagram/{self.graph_time}/edges/{target}').json()
 
     def add_edge(self, src: str, dst: str, **attributes: Any) -> Dict[str, Any]:
         """Add an edge between two existing nodes.
@@ -294,15 +312,17 @@ class Graph:
                 srlg=[100], max_rsrv_link_bw=1.25e7.
 
         Returns:
-            The new edge, with the `id` it was given.
+            The new edge, with the `edge_key` it was given.
         """
         body = {'src': src, 'dst': dst, **attributes}
         return self._client.post(f'/diagram/{self.graph_time}/edges', json=body).json()
 
     def update_edge(
         self,
-        edge_id: int,
+        edge_key: Union[str, int, None] = None,
         isis_level: Optional[int] = None,
+        *,
+        edge_id: Optional[int] = None,
         **attributes: Any,
     ) -> Dict[str, Any]:
         """Change some attributes of an edge and leave the others as they are.
@@ -312,7 +332,8 @@ class Graph:
         admin_group and [] for srlg.
 
         Args:
-            edge_id: The `id` an `edges_list` item carries.
+            edge_key: The `edge_key` an `edges_list` item carries. An integer is read as the
+                deprecated `id`, as is `edge_id`.
             isis_level: 1 or 2 to write one level only. The server refuses with a 400 an
                 edge that is not in that level or has no per-level IS-IS data.
             **attributes: Attributes to change, e.g. srlg=[100], temetric=7.
@@ -323,24 +344,41 @@ class Graph:
         Raises:
             ValidationError: On a value of the wrong type (e.g. srlg=5) or an unknown level.
         """
+        target = self._warn_if_edge_id(edge_key, edge_id)
         params = {'isis_level': isis_level} if isis_level is not None else {}
-        self._client.patch(
-            f'/diagram/{self.graph_time}/edges/{edge_id}', params=params, json=attributes)
+        if isinstance(target, str):
+            self._client.patch(f'/diagram/{self.graph_time}/edges', params=params, json={**attributes, 'edge_key': target})
+            return self._get_edge(target)
+        self._client.patch(f'/diagram/{self.graph_time}/edges/{target}', params=params, json=attributes)
         # The API answers with a message, not the edge -- refetch it.
-        return self.edge(edge_id)
+        return self._get_edge(target)
 
-    def replace_edge(self, edge_id: int, **attributes: Any) -> Dict[str, Any]:
+    def replace_edge(
+        self,
+        edge_key: Union[str, int, None] = None,
+        *,
+        edge_id: Optional[int] = None,
+        **attributes: Any,
+    ) -> Dict[str, Any]:
         """Rewrite an edge: every attribute not given is dropped, TE values and IS-IS level data included.
 
         Use `update_edge` to change a few attributes. After this, an explicit-level CSPF on
         the graph is refused (422) because the edge no longer has per-level data.
         """
-        self._client.put(f'/diagram/{self.graph_time}/edges/{edge_id}', json=attributes)
-        return self.edge(edge_id)
+        target = self._warn_if_edge_id(edge_key, edge_id)
+        if isinstance(target, str):
+            self._client.put(f'/diagram/{self.graph_time}/edges', json={**attributes, 'edge_key': target})
+            return self._get_edge(target)
+        self._client.put(f'/diagram/{self.graph_time}/edges/{target}', json=attributes)
+        return self._get_edge(target)
 
-    def delete_edge(self, edge_id: int) -> None:
-        """Delete an edge. Later edges are renumbered, so read ids again from `edges_list`."""
-        self._client.delete(f'/diagram/{self.graph_time}/edges/{edge_id}')
+    def delete_edge(self, edge_key: Union[str, int, None] = None, *, edge_id: Optional[int] = None) -> None:
+        """Delete an edge. Other edges keep their `edge_key`."""
+        target = self._warn_if_edge_id(edge_key, edge_id)
+        if isinstance(target, str):
+            self._client.delete(f'/diagram/{self.graph_time}/edges', params={'edge_key': target})
+            return
+        self._client.delete(f'/diagram/{self.graph_time}/edges/{target}')
 
     def lsps_list(
         self,

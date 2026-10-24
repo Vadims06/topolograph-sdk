@@ -1,3 +1,22 @@
+# Release Notes - topolograph-sdk v0.3.0
+
+Requires Topolograph 3.0.2 or later: its diagram edges carry `edge_key`.
+
+## Changed
+
+- `graph.edge`, `update_edge`, `replace_edge` and `delete_edge` take the `edge_key` an
+  edge carries (`graph.edges_list()` items, `graph.add_edge()` answer) instead of the
+  integer `id`. A key keeps naming the same edge after another edge is deleted; the id
+  does not. A key is fixed when the edge is created; replacing the whole diagram text
+  names the edges anew.
+
+## Deprecated
+
+- Passing an integer, or `edge_id=`, still works for this release and raises a
+  `DeprecationWarning`. It will be removed in the next release.
+
+---
+
 # Release Notes - topolograph-sdk v0.2.1
 
 ## New
