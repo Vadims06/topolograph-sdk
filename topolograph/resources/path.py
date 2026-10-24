@@ -161,7 +161,7 @@ class PathsManager:
         Returns:
             Dictionary with 'isGraphStillConnected', 'affectedLinks'
             (sptPathsIncreasedInPercent/sptPathsDecreasedInPercent, each a
-            list of {'from', 'to', 'value'} links), and 'disjointedNodes'
+            list of {'edge_key', 'from', 'to', 'value'}, one per link direction), and 'disjointedNodes'
             (list of node-name groups, if the graph split)
         """
         payload = {

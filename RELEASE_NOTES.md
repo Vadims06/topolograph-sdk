@@ -9,7 +9,8 @@
 
 - Topolograph >= 3.0.2 lists every link whose load changes in `affectedLinks`:
   `sptPathsIncreasedInPercent` and `sptPathsDecreasedInPercent` are lists of
-  `{from, to, value}`. Earlier versions returned only one of the links.
+  `{edge_key, from, to, value}`, one record per direction of each link, so parallel
+  links are told apart. Earlier versions returned only one of the links.
 
 ---
 
