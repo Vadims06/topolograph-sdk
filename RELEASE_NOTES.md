@@ -1,6 +1,6 @@
 # Release Notes - topolograph-sdk v0.3.0
 
-Requires a Topolograph newer than 3.0.2: its diagram edges carry `edge_key`.
+Requires Topolograph 3.0.2 or later: its diagram edges carry `edge_key`.
 
 ## Changed
 
