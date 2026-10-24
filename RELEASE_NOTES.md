@@ -1,3 +1,18 @@
+# Release Notes - topolograph-sdk v0.2.1
+
+## New
+
+- `graph.paths.node_failure_reaction(["10.1.1.2", "10.1.1.4"])`: what happens to the
+  network if these routers go down, in the same shape as `edge_failure_reaction`.
+
+## Changed
+
+- Topolograph >= 3.0.2 lists every link whose load changes in `affectedLinks`:
+  `sptPathsIncreasedInPercent` and `sptPathsDecreasedInPercent` are lists of
+  `{from, to, value}`. Earlier versions returned only one of the links.
+
+---
+
 # Release Notes - topolograph-sdk v0.2.0
 
 Requires Topolograph >= 2.73.

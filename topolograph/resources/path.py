@@ -137,10 +137,23 @@ class PathsManager:
             f'/graph/{self.graph_time}/route-resolution/{start_node}', json=body)
         return response.json()
 
+    def node_failure_reaction(self, failed_nodes: List[str]) -> dict:
+        """Predict the whole-network impact if one or more routers go down.
+
+        Args:
+            failed_nodes: Node names of the failed routers
+
+        Returns:
+            The same dictionary as `edge_failure_reaction`.
+        """
+        payload = {'graph_time': self.graph_time, 'failed_nodes_list': list(failed_nodes)}
+        response = self._client.post('/network_reaction/node_failure/', json=payload)
+        return response.json()
+
     def edge_failure_reaction(self, failed_edges: List[Tuple[str, str]]) -> dict:
         """Predict the whole-network impact if one or more links go down.
 
-        Same shape as a node-failure prediction, for links instead of nodes.
+        Same shape as `node_failure_reaction`, for links instead of nodes.
 
         Args:
             failed_edges: List of (src, dst) node-name tuples identifying each failed link
