@@ -222,3 +222,19 @@ def test_nodes_patch_many_sends_one_request():
     graph.nodes.patch_many(changes)
 
     assert client.calls == [('patch', '/graph/graph-time/nodes', {'json': changes})]
+
+
+def test_paths_backup_path_sends_only_what_is_given():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.paths.backup_path(
+        'R1', 'R4', failed_edges=['k1', 'k2'], changed_costs=[{'edge_key': 'k3', 'cost': 50}],
+        at='2026-11-01T10:00:00Z')
+
+    assert client.calls == [
+        ('post', '/graph/graph-time/analyse/spt-edge-failure', {
+            'json': {'from': 'R1', 'to': 'R4', 'shared_media': False, 'failed_edges': ['k1', 'k2'],
+                     'changed_costs': [{'edge_key': 'k3', 'cost': 50}]},
+            'params': {'at': '2026-11-01T10:00:00Z'}}),
+    ]

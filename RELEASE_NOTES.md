@@ -4,6 +4,7 @@
 
 - `graph.analyse(kind)`: whole-graph reports (`GET /graph/{graph_time}/analyse/{kind}`).
 - `graph.paths.tree(node, direction)`: the shortest-path tree from or to one node.
+- `graph.paths.backup_path(src, dst, failed_edges=, failed_nodes=, changed_costs=)`: the shortest path under failures or cost changes.
 - `graph.paths.underlay(from_nodes, to_nodes)` and `graph.paths.backup_in_inter_area()`.
 - `graph.nodes.patch_many(changes)`: bulk hostname / Router ID update of an LSDB graph.
 - `RateLimitError` (HTTP 429) carries `retry_after` in seconds when the server sends it.

@@ -218,6 +218,9 @@ tree = graph.paths.tree("1.1.1.1", direction="out")
 graph.paths.underlay(["leaf1", "leaf2"], ["spine1"])
 graph.paths.backup_in_inter_area()
 
+# Backup path: the shortest path once links (edge keys) or routers fail, or link costs change
+graph.paths.backup_path("1.1.1.1", "2.2.2.2", failed_edges=["<edge_key>"])
+
 # Hostnames and Router IDs of several nodes in one request (LSDB graphs)
 graph.nodes.patch_many([{"name": "10.0.0.1", "hostname": "r1"}])
 ```

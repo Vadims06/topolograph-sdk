@@ -220,3 +220,41 @@ class PathsManager:
             f'/graph/{self.graph_time}/analyse/backup-paths-in-inter-area',
             json={'neighbors_with_ecmp_only': neighbors_with_ecmp_only}, params=params)
         return response.json()
+
+    def backup_path(
+        self,
+        src_node: str,
+        dst_node: str,
+        failed_edges: Optional[List[str]] = None,
+        failed_nodes: Optional[List[str]] = None,
+        changed_costs: Optional[List[Dict[str, Any]]] = None,
+        shared_media: bool = False,
+        at: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """The shortest path once links or routers fail, or link costs change.
+
+        Give at least one of failed_edges, failed_nodes and changed_costs.
+
+        Args:
+            src_node: Node name, hostname or IS-IS System ID.
+            dst_node: The same, for the destination.
+            failed_edges: Edge keys (`graph.edges_list(include=['edge_key'])`); each link fails in both directions.
+            failed_nodes: Routers removed from the graph.
+            changed_costs: [{'edge_key': ..., 'cost': 1..4294967295}]; the cost of that direction only.
+            shared_media: A failed link on a multi-access segment fails every adjacency of the segment.
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result': path and cost, 'nodes', 'edges': links on the path and the failed links}.
+        """
+        body: Dict[str, Any] = {'from': src_node, 'to': dst_node, 'shared_media': shared_media}
+        if failed_edges:
+            body['failed_edges'] = list(failed_edges)
+        if failed_nodes:
+            body['failed_nodes'] = list(failed_nodes)
+        if changed_costs:
+            body['changed_costs'] = list(changed_costs)
+        params = {'at': at} if at is not None else {}
+        response = self._client.post(
+            f'/graph/{self.graph_time}/analyse/spt-edge-failure', json=body, params=params)
+        return response.json()
