@@ -145,12 +145,12 @@ class Topolograph:
                 )
             elif response.status_code == 429:
                 retry_after = response.headers.get('Retry-After')
+                seconds = int(retry_after) if retry_after and retry_after.isdigit() else None
                 raise RateLimitError(
-                    "Too many requests."
-                    + (f" Retry after {retry_after} seconds." if retry_after else ""),
+                    "Too many requests." + (f" Retry after {seconds} seconds." if seconds is not None else ""),
                     status_code=429,
                     response=response,
-                    retry_after=int(retry_after) if retry_after and retry_after.isdigit() else None,
+                    retry_after=seconds,
                 )
             elif response.status_code == 404:
                 raise NotFoundError(
