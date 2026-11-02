@@ -2,7 +2,7 @@
 
 import warnings
 from itertools import islice
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..exceptions import NotFoundError
 from .query import QueryManager
@@ -178,3 +178,19 @@ class NodesManager(QueryManager):
         # new canonical name when this call renamed it, else the old id/alias
         # still resolves.
         return self.get_by_id(attributes.get('name', node_id))
+
+    def patch_many(self, changes: List[Dict[str, str]]) -> Dict[str, Any]:
+        """Set hostnames and Router IDs of several nodes of an LSDB graph in one request.
+
+        Args:
+            changes: [{'name': node_id, 'hostname': ..., 'router_id': ...}]; a field left out
+                keeps its value, an empty string clears it.
+
+        Returns:
+            {'changes', 'rejected', 'skipped'}.
+
+        Raises:
+            ValidationError: An unknown node name; nothing is changed.
+        """
+        response = self._client.patch(f'/graph/{self.graph_time}/nodes', json=changes)
+        return response.json()

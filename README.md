@@ -204,6 +204,26 @@ path = graph.paths.shortest(
 )
 ```
 
+### Graph reports and path trees
+
+```python
+# Whole-graph reports: central-nodes, most-loaded, single-point-of-failure, fault-tolerant,
+# heatmap, unsym-paths, unidir-edges, backup-paths-in-ecmp, duplicated-terminated-networks, network-score
+report = graph.analyse("single-point-of-failure")
+
+# Every shortest path from (or to) one node as one tree
+tree = graph.paths.tree("1.1.1.1", direction="out")
+
+# Shortest paths between two sets of routers, and backup paths between areas
+graph.paths.underlay(["leaf1", "leaf2"], ["spine1"])
+graph.paths.backup_in_inter_area()
+
+# Hostnames and Router IDs of several nodes in one request (LSDB graphs)
+graph.nodes.patch_many([{"name": "10.0.0.1", "hostname": "r1"}])
+```
+
+Every `at=` argument is an ISO 8601 moment: a watcher graph is shown with the events up to it.
+
 ### Events
 
 ```python
@@ -396,6 +416,7 @@ from topolograph.exceptions import (
     AuthenticationError,
     NotFoundError,
     ValidationError,
+    RateLimitError,
     APIError
 )
 
@@ -405,6 +426,8 @@ except NotFoundError:
     print("Graph not found")
 except AuthenticationError:
     print("Authentication failed")
+except RateLimitError as error:
+    print(f"Retry in {error.retry_after} seconds")  # None when the server sent no Retry-After
 except APIError as e:
     print(f"API error: {e}")
 ```

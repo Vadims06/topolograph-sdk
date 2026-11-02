@@ -9,6 +9,7 @@ from .exceptions import (
     APIError,
     AuthenticationError,
     NotFoundError,
+    RateLimitError,
     ValidationError,
 )
 from .resources.graph import GraphsManager
@@ -122,6 +123,7 @@ class Topolograph:
             AuthenticationError: If authentication fails (401)
             NotFoundError: If resource not found (404)
             ValidationError: If request validation fails (400, 405)
+            RateLimitError: If the server limits the request rate (429)
             APIError: For other API errors
         """
         # Construct URL properly - ensure /api is preserved
@@ -140,6 +142,15 @@ class Topolograph:
                     "Authentication failed. Check your token or credentials.",
                     status_code=401,
                     response=response
+                )
+            elif response.status_code == 429:
+                retry_after = response.headers.get('Retry-After')
+                raise RateLimitError(
+                    "Too many requests."
+                    + (f" Retry after {retry_after} seconds." if retry_after else ""),
+                    status_code=429,
+                    response=response,
+                    retry_after=int(retry_after) if retry_after and retry_after.isdigit() else None,
                 )
             elif response.status_code == 404:
                 raise NotFoundError(

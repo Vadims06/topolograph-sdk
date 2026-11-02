@@ -505,8 +505,24 @@ class Graph:
             f'/graph/{self.graph_time}/cspf-path/{node_a}/{node_b}', params=params)
         return response.json()
     
+    def analyse(self, kind: str, at: Optional[str] = None) -> Dict[str, Any]:
+        """A whole-graph report: which routers or links are central, loaded, a single point of failure, and so on.
+
+        Args:
+            kind: central-nodes, most-loaded, single-point-of-failure, fault-tolerant, heatmap,
+                unsym-paths, unidir-edges, backup-paths-in-ecmp, duplicated-terminated-networks
+                or network-score.
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result', 'nodes', 'edges'}: what 'result' holds depends on the kind.
+        """
+        params = {'at': at} if at is not None else {}
+        response = self._client.get(f'/graph/{self.graph_time}/analyse/{kind}', params=params)
+        return response.json()
+
     def delete(self) -> None:
-        """Delete this graph."""
+        """Delete this graph; only its owner can (a shared user gets APIError 403)."""
         self._client.delete(f'/graph/{self.graph_time}')
     
     def __repr__(self) -> str:
