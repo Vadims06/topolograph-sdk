@@ -1,3 +1,22 @@
+# Release Notes - topolograph-sdk (unreleased)
+
+## New
+
+- `graph.analyse(kind)`: whole-graph reports (`GET /graph/{graph_time}/analyse/{kind}`).
+- `graph.paths.tree(node, direction)`: the shortest-path tree from or to one node.
+- `graph.paths.backup_path(src, dst, failed_edges=, failed_nodes=, changed_costs=)`: the shortest path under failures or cost changes.
+- `graph.paths.underlay(from_nodes, to_nodes)` and `graph.paths.backup_in_inter_area()`.
+- `graph.nodes.patch_many(changes)`: bulk hostname / Router ID update of an LSDB graph.
+- `RateLimitError` (HTTP 429) carries `retry_after` in seconds when the server sends it.
+
+## Changed
+
+- `node_failure_reaction` and `edge_failure_reaction` call `/network-reaction/node-failure/`
+  and `/network-reaction/edge-failure/`; the old snake_case paths are deprecated on the server.
+- `graph.delete()` on a graph shared with you raises `APIError` with status 403: only the owner can delete.
+
+---
+
 # Release Notes - topolograph-sdk v0.3.0
 
 Requires Topolograph 3.0.2 or later: its diagram edges carry `edge_key`.

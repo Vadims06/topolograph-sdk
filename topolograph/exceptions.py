@@ -27,3 +27,10 @@ class NotFoundError(APIError):
 class ValidationError(APIError):
     """Raised when request validation fails (400/405)."""
     pass
+
+
+class RateLimitError(APIError):
+    """Raised when the server limits the request rate (429); retry_after is in seconds, if sent."""
+    def __init__(self, message, status_code=429, response=None, retry_after=None):
+        super().__init__(message, status_code=status_code, response=response)
+        self.retry_after = retry_after

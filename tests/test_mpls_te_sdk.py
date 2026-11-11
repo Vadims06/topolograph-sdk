@@ -171,8 +171,8 @@ def test_paths_shortest_network():
 
 
 @pytest.mark.parametrize('method, failed, path, body', [
-    ('edge_failure_reaction', [('R1', 'R2')], '/network_reaction/edge_failure/', {'failed_edges_list': [['R1', 'R2']]}),
-    ('node_failure_reaction', ['R2', 'R4'], '/network_reaction/node_failure/', {'failed_nodes_list': ['R2', 'R4']}),
+    ('edge_failure_reaction', [('R1', 'R2')], '/network-reaction/edge-failure/', {'failed_edges_list': [['R1', 'R2']]}),
+    ('node_failure_reaction', ['R2', 'R4'], '/network-reaction/node-failure/', {'failed_nodes_list': ['R2', 'R4']}),
 ])
 def test_paths_failure_reaction(method, failed, path, body):
     client = _Client()
@@ -181,3 +181,60 @@ def test_paths_failure_reaction(method, failed, path, body):
     getattr(graph.paths, method)(failed)
 
     assert client.calls == [('post', path, {'json': {'graph_time': 'graph-time', **body}})]
+
+
+def test_graph_analyse_reads_the_kind_at_a_moment():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.analyse('single-point-of-failure', at='2026-11-01T10:00:00Z')
+
+    assert client.calls == [
+        ('get', '/graph/graph-time/analyse/single-point-of-failure',
+         {'params': {'at': '2026-11-01T10:00:00Z'}}),
+    ]
+
+
+@pytest.mark.parametrize('call, expected', [
+    (lambda paths: paths.tree('R1', direction='in'),
+     ('get', '/graph/graph-time/path/R1', {'params': {'direction': 'in'}})),
+    (lambda paths: paths.underlay(['R1', 'R2'], ['R3'], at='2026-11-01T10:00:00Z'),
+     ('post', '/graph/graph-time/analyse/underlay',
+      {'json': {'from': ['R1', 'R2'], 'to': ['R3']}, 'params': {'at': '2026-11-01T10:00:00Z'}})),
+    (lambda paths: paths.backup_in_inter_area(neighbors_with_ecmp_only=True),
+     ('post', '/graph/graph-time/analyse/backup-paths-in-inter-area',
+      {'json': {'neighbors_with_ecmp_only': True}, 'params': {}})),
+])
+def test_paths_analyses(call, expected):
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    call(graph.paths)
+
+    assert client.calls == [expected]
+
+
+def test_nodes_patch_many_sends_one_request():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+    changes = [{'name': '10.0.0.1', 'hostname': 'r1'}, {'name': '10.0.0.2', 'router_id': '2.2.2.2'}]
+
+    graph.nodes.patch_many(changes)
+
+    assert client.calls == [('patch', '/graph/graph-time/nodes', {'json': changes})]
+
+
+def test_paths_backup_path_sends_only_what_is_given():
+    client = _Client()
+    graph = Graph(client, {'graph_time': 'graph-time'})
+
+    graph.paths.backup_path(
+        'R1', 'R4', failed_edges=['k1', 'k2'], changed_costs=[{'edge_key': 'k3', 'cost': 50}],
+        at='2026-11-01T10:00:00Z')
+
+    assert client.calls == [
+        ('post', '/graph/graph-time/analyse/spt-edge-failure', {
+            'json': {'from': 'R1', 'to': 'R4', 'shared_media': False, 'failed_edges': ['k1', 'k2'],
+                     'changed_costs': [{'edge_key': 'k3', 'cost': 50}]},
+            'params': {'at': '2026-11-01T10:00:00Z'}}),
+    ]

@@ -147,7 +147,7 @@ class PathsManager:
             The same dictionary as `edge_failure_reaction`.
         """
         payload = {'graph_time': self.graph_time, 'failed_nodes_list': list(failed_nodes)}
-        response = self._client.post('/network_reaction/node_failure/', json=payload)
+        response = self._client.post('/network-reaction/node-failure/', json=payload)
         return response.json()
 
     def edge_failure_reaction(self, failed_edges: List[Tuple[str, str]]) -> dict:
@@ -168,5 +168,93 @@ class PathsManager:
             'graph_time': self.graph_time,
             'failed_edges_list': [[src, dst] for src, dst in failed_edges],
         }
-        response = self._client.post('/network_reaction/edge_failure/', json=payload)
+        response = self._client.post('/network-reaction/edge-failure/', json=payload)
+        return response.json()
+
+    def tree(self, node: str, direction: str = 'out', at: Optional[str] = None) -> Dict[str, Any]:
+        """Every shortest path from a node (`out`) or to it (`in`) as one tree.
+
+        Args:
+            node: Node name, hostname or IS-IS System ID.
+            direction: 'out' (from the node) or 'in' (to the node).
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result': {'root', 'direction'}, 'nodes', 'edges'}: the tree's links are in 'edges'.
+        """
+        params = {'direction': direction}
+        if at is not None:
+            params['at'] = at
+        response = self._client.get(f'/graph/{self.graph_time}/path/{node}', params=params)
+        return response.json()
+
+    def underlay(self, from_nodes: List[str], to_nodes: List[str], at: Optional[str] = None) -> Dict[str, Any]:
+        """Shortest IGP paths from every router of one set to every router of the other, as one union.
+
+        Args:
+            from_nodes: 1 to 64 node names, hostnames, System IDs or EVPN VTEP addresses.
+            to_nodes: The same, for the targets.
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result': {'paths', 'unreachable'}, 'nodes', 'edges'}.
+        """
+        params = {'at': at} if at is not None else {}
+        response = self._client.post(
+            f'/graph/{self.graph_time}/analyse/underlay',
+            json={'from': list(from_nodes), 'to': list(to_nodes)}, params=params)
+        return response.json()
+
+    def backup_in_inter_area(self, neighbors_with_ecmp_only: bool = False, at: Optional[str] = None) -> Dict[str, Any]:
+        """Backup paths between areas, with the host groups the current and backup paths cross.
+
+        Args:
+            neighbors_with_ecmp_only: Limit the rows to neighbors that have an ECMP path only.
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result': {'rows': [{'source', 'target', 'current_groups', 'backup_groups'}]}, 'nodes', 'edges'}.
+        """
+        params = {'at': at} if at is not None else {}
+        response = self._client.post(
+            f'/graph/{self.graph_time}/analyse/backup-paths-in-inter-area',
+            json={'neighbors_with_ecmp_only': neighbors_with_ecmp_only}, params=params)
+        return response.json()
+
+    def backup_path(
+        self,
+        src_node: str,
+        dst_node: str,
+        failed_edges: Optional[List[str]] = None,
+        failed_nodes: Optional[List[str]] = None,
+        changed_costs: Optional[List[Dict[str, Any]]] = None,
+        shared_media: bool = False,
+        at: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """The shortest path once links or routers fail, or link costs change.
+
+        Give at least one of failed_edges, failed_nodes and changed_costs.
+
+        Args:
+            src_node: Node name, hostname or IS-IS System ID.
+            dst_node: The same, for the destination.
+            failed_edges: Edge keys (`graph.edges_list(include=['edge_key'])`); each link fails in both directions.
+            failed_nodes: Routers removed from the graph.
+            changed_costs: [{'edge_key': ..., 'cost': 1..4294967295}]; the cost of that direction only.
+            shared_media: A failed link on a multi-access segment fails every adjacency of the segment.
+            at: ISO 8601 moment; a watcher graph with the events up to it.
+
+        Returns:
+            {'result': path and cost, 'nodes', 'edges': links on the path and the failed links}.
+        """
+        body: Dict[str, Any] = {'from': src_node, 'to': dst_node, 'shared_media': shared_media}
+        if failed_edges:
+            body['failed_edges'] = list(failed_edges)
+        if failed_nodes:
+            body['failed_nodes'] = list(failed_nodes)
+        if changed_costs:
+            body['changed_costs'] = list(changed_costs)
+        params = {'at': at} if at is not None else {}
+        response = self._client.post(
+            f'/graph/{self.graph_time}/analyse/spt-edge-failure', json=body, params=params)
         return response.json()
