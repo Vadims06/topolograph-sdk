@@ -196,6 +196,9 @@ for path_nodes in path.paths:
 # Shortest path between networks/IPs
 path = graph.paths.shortest_network("192.168.1.1", "192.168.2.1")
 
+# Path as of a moment (watcher events applied up to it); not with with_lsps
+path = graph.paths.shortest("1.1.1.1", "2.2.2.2", at="2026-11-01T10:00:00Z")
+
 # Backup path (removing specific edges)
 path = graph.paths.shortest(
     "1.1.1.1",
@@ -360,6 +363,7 @@ operators and run a constrained path with `cspf_path`, optionally for one IS-IS 
 ```python
 edges = graph.edges_list(temetric__gte=100)
 te_links = graph.edges_list(is_te_link=True)
+past_edges = graph.edges_list(at="2026-11-01T10:00:00Z")  # also nodes_list, networks_list
 path = graph.cspf_path("10.10.10.1", "10.10.10.7", bandwidth="5G", level=2)
 ```
 

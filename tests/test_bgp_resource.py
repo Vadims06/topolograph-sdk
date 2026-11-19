@@ -6,6 +6,8 @@ No live API: a fake client records every call so the tests prove which URL,
 verb and params each SDK method produces.
 """
 
+import warnings
+
 import pytest
 
 from topolograph.resources.bgp import BgpGraph, BgpGraphsManager
@@ -331,3 +333,54 @@ def test_resolve_route_posts_the_body_and_omits_unset_fields():
          {"json": {"destination": "8.8.8.8", "with_lsps": True, "vrf": "BLUE",
                    "evidence": "fib", "changed_edge_costs": {"3": 50}}}),
     ]
+
+
+AT = "2026-11-01T10:00:00Z"
+
+
+@pytest.mark.parametrize("dst_nodes, path_suffix", [
+    (["leaf2"], "leaf1/leaf2"),
+    (["leaf2", "leaf3"], "leaf1/leaf2,leaf3"),
+])
+def test_paths_shortest_methods_send_at(dst_nodes, path_suffix):
+    client = _Client()
+    paths = PathsManager(client, "igp-time")
+
+    if len(dst_nodes) == 1:
+        paths.shortest("leaf1", dst_nodes[0], at=AT)
+    else:
+        paths.shortest_to_many("leaf1", dst_nodes, at=AT)
+
+    assert client.calls == [("get", f"/graph/igp-time/path/{path_suffix}", {"params": {"at": AT}})]
+
+
+def test_paths_shortest_to_many_without_at_sends_no_params():
+    client = _Client()
+
+    PathsManager(client, "igp-time").shortest_to_many("leaf1", ["leaf2", "leaf3"])
+
+    assert client.calls == [("get", "/graph/igp-time/path/leaf1/leaf2,leaf3", {})]
+
+
+def test_paths_shortest_rejects_with_lsps_together_with_at():
+    client = _Client()
+
+    with pytest.raises(ValueError):
+        PathsManager(client, "igp-time").shortest("leaf1", "leaf2", with_lsps=True, at=AT)
+
+    assert client.calls == []
+
+
+@pytest.mark.parametrize("method, route, base_params", [
+    ("nodes_list", "nodes", {"page": 1, "per_page": 50}),
+    ("edges_list", "edges", {"page": 1, "per_page": 50}),
+    ("networks_list", "networks", {"page": 1, "per_page": 20, "filter_type": "all"}),
+])
+def test_graph_list_methods_send_at(method, route, base_params):
+    client = _Client()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        getattr(_graph(client), method)(at=AT)
+
+    assert client.calls == [("get", f"/graph/igp-time/{route}", {"params": {**base_params, "at": AT}})]
