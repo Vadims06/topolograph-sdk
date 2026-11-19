@@ -34,7 +34,8 @@ class PathsManager:
         self._client = client
         self.graph_time = graph_time
 
-    def shortest(self, src_node: str, dst_node: str, with_lsps: bool = False) -> Path:
+    def shortest(self, src_node: str, dst_node: str, with_lsps: bool = False,
+                 at: Optional[str] = None) -> Path:
         """Compute the shortest path between two nodes.
 
         Plain IGP shortest path by default. For "what if this link is down"
@@ -54,24 +55,31 @@ class PathsManager:
         Returns:
             Path object
         """
+        if with_lsps and at is not None:
+            raise ValueError("with_lsps cannot be combined with at")
         params = {'with_lsps': 'true'} if with_lsps else {}
+        if at is not None:
+            params['at'] = at
         response = self._client.get(
             f'/graph/{self.graph_time}/path/{src_node}/{dst_node}', params=params)
         return Path(response.json())
 
-    def shortest_to_many(self, src_node: str, dst_nodes: List[str]) -> Dict[str, Any]:
+    def shortest_to_many(self, src_node: str, dst_nodes: List[str],
+                         at: Optional[str] = None) -> Dict[str, Any]:
         """One SPF from src_node to several targets, instead of one call per target.
 
         Args:
             src_node: Source node identifier.
             dst_nodes: Target node identifiers (more than one -- a single
                 target should use `shortest` instead).
+            at: ISO 8601 moment; paths in the graph with watcher events applied up to it.
 
         Returns:
             Dictionary keyed 'targets': per-target cost, path or error.
         """
+        kwargs = {'params': {'at': at}} if at is not None else {}
         response = self._client.get(
-            f'/graph/{self.graph_time}/path/{src_node}/{",".join(dst_nodes)}')
+            f'/graph/{self.graph_time}/path/{src_node}/{",".join(dst_nodes)}', **kwargs)
         return response.json()
 
     def shortest_network(self, src_ip_or_network: str, dst_ip_or_network: str) -> Path:

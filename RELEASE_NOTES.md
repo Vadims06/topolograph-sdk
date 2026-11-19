@@ -1,3 +1,15 @@
+# Release Notes - topolograph-sdk v0.4.0
+
+Requires Topolograph 3.0.12 or later.
+
+## New
+
+- `at` (ISO 8601 moment) on `graph.paths.shortest`, `shortest_to_many`, `graph.nodes_list`,
+  `edges_list` and `networks_list`: the graph with watcher events applied up to that moment.
+  `shortest` raises `ValueError` for `with_lsps=True` together with `at`.
+
+---
+
 # Release Notes - topolograph-sdk v0.3.0
 
 Requires Topolograph 3.0.2 or later: its diagram edges carry `edge_key`.

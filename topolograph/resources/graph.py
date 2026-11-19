@@ -95,7 +95,8 @@ class Graph:
         self,
         page: int = 1,
         per_page: int = 20,
-        filter_type: str = 'all'
+        filter_type: str = 'all',
+        at: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get paginated list of networks with optional filtering.
         
@@ -103,6 +104,7 @@ class Graph:
             page: Page number (default: 1)
             per_page: Items per page (default: 20)
             filter_type: Filter type - 'all', 'backuped_only', or 'non_backuped_only' (default: 'all')
+            at: ISO 8601 moment; networks with watcher events applied up to it.
         
         Returns:
             Dictionary with:
@@ -114,6 +116,8 @@ class Graph:
             'per_page': per_page,
             'filter_type': filter_type
         }
+        if at is not None:
+            params['at'] = at
         response = self._client.get(f'/graph/{self.graph_time}/networks', params=params)
         return response.json()
     
@@ -129,15 +133,16 @@ class Graph:
         overload: Optional[bool] = None,
         attached: Optional[bool] = None,
         maxmetric: Optional[bool] = None,
+        at: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Deprecated: use nodes.filter() instead."""
+        """Deprecated: use nodes.filter() instead. `at`: ISO 8601 moment to read the nodes as of."""
         warnings.warn(
             "Graph.nodes_list() is deprecated, use Graph.nodes.filter() instead",
             DeprecationWarning,
             stacklevel=2,
         )
         filters = dict(protocol=protocol, watcher=watcher, area=area, abr=abr, asbr=asbr,
-                       overload=overload, attached=attached, maxmetric=maxmetric)
+                       overload=overload, attached=attached, maxmetric=maxmetric, at=at)
         return self.nodes._page(filters, page, per_page)
     
     def areas_list(self) -> Dict[str, Any]:
@@ -217,6 +222,7 @@ class Graph:
         page: int = 1,
         per_page: int = 50,
         is_te_link: Optional[bool] = None,
+        at: Optional[str] = None,
         **edge_query_params: Union[str, int, float]
     ) -> Dict[str, Any]:
         """Get paginated list of edges with optional filters and TE link attribute querying.
@@ -246,6 +252,7 @@ class Graph:
             per_page: Items per page (default: 50).
             is_te_link: True keeps only TE links, False only links that are not.
                 Any other type is rejected by the server with HTTP 400.
+            at: ISO 8601 moment; edges with watcher events applied up to it.
             **edge_query_params: Per-edge attribute filters. Exact match or range suffix
                 (e.g. weight=10, temetric__gt=100, unreserved_bw_0__lt=1e9).
 
@@ -269,6 +276,8 @@ class Graph:
             params['include'] = ','.join(include)
         if is_te_link is not None:
             params['is_te_link'] = str(is_te_link).lower()
+        if at is not None:
+            params['at'] = at
         params.update(edge_query_params)
         response = self._client.get(f'/graph/{self.graph_time}/edges', params=params)
         return response.json()
